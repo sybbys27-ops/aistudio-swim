@@ -1,0 +1,5 @@
+{
+  "name": "Freestyle Swimming Auto Simulation",
+  "description": "A high-precision 3D freestyle swimming simulation to analyze the relationship between rolling, stroke interval, glide hold, and efficiency.",
+  "requestFramePermissions": []
+}
