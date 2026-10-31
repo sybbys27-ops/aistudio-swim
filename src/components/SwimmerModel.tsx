@@ -6,10 +6,10 @@ import { ArmPhase, SimulationState } from "../types";
 interface SwimmerModelProps {
   rollAngle: number;
   pitchAngle: number;
-  leftArmPhase: ArmPhase;
   rightArmPhase: ArmPhase;
-  leftArmTime: number;
+  leftArmPhase: ArmPhase;
   rightArmTime: number;
+  leftArmTime: number;
   distance: number;
   yOffset: number;
   state: SimulationState;
@@ -18,19 +18,19 @@ interface SwimmerModelProps {
 export function SwimmerModel({
   rollAngle,
   pitchAngle,
-  leftArmPhase,
   rightArmPhase,
-  leftArmTime,
+  leftArmPhase,
   rightArmTime,
+  leftArmTime,
   distance,
   yOffset,
   state: simState,
 }: SwimmerModelProps) {
   const groupRef = useRef<Group>(null);
-  const leftArmRef = useRef<Group>(null);
   const rightArmRef = useRef<Group>(null);
-  const leftLegRef = useRef<Group>(null);
+  const leftArmRef = useRef<Group>(null);
   const rightLegRef = useRef<Group>(null);
+  const leftLegRef = useRef<Group>(null);
 
   const isRunning = simState !== SimulationState.Stopped && simState !== SimulationState.Finished;
 
@@ -54,18 +54,18 @@ export function SwimmerModel({
       groupRef.current.position.y = yOffset;
     }
 
-    if (leftArmRef.current) {
-      leftArmRef.current.rotation.x = getArmRotation(leftArmPhase, leftArmTime);
-    }
     if (rightArmRef.current) {
       rightArmRef.current.rotation.x = getArmRotation(rightArmPhase, rightArmTime);
     }
-
-    if (leftLegRef.current) {
-      leftLegRef.current.rotation.x = isRunning ? Math.sin(t * 12) * 0.25 : 0;
+    if (leftArmRef.current) {
+      leftArmRef.current.rotation.x = getArmRotation(leftArmPhase, leftArmTime);
     }
+
     if (rightLegRef.current) {
-      rightLegRef.current.rotation.x = isRunning ? Math.sin(t * 12 + Math.PI) * 0.25 : 0;
+      rightLegRef.current.rotation.x = isRunning ? Math.sin(t * 12) * 0.25 : 0;
+    }
+    if (leftLegRef.current) {
+      leftLegRef.current.rotation.x = isRunning ? Math.sin(t * 12 + Math.PI) * 0.25 : 0;
     }
   });
 
@@ -89,8 +89,8 @@ export function SwimmerModel({
         </mesh>
       </group>
 
-      {/* Left Arm */}
-      <group ref={leftArmRef} position={[-0.22, 0, 0.35]}>
+      {/* Right Arm */}
+      <group ref={rightArmRef} position={[-0.22, 0, 0.35]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.2]}>
           <cylinderGeometry args={[0.04, 0.03, 0.45, 8]} />
           <meshStandardMaterial color="#ffd6a5" />
@@ -102,8 +102,8 @@ export function SwimmerModel({
         </mesh>
       </group>
 
-      {/* Right Arm */}
-      <group ref={rightArmRef} position={[0.22, 0, 0.35]}>
+      {/* Left Arm */}
+      <group ref={leftArmRef} position={[0.22, 0, 0.35]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, 0.2]}>
           <cylinderGeometry args={[0.04, 0.03, 0.45, 8]} />
           <meshStandardMaterial color="#ffd6a5" />
@@ -116,13 +116,13 @@ export function SwimmerModel({
       </group>
 
       {/* Legs */}
-      <group ref={leftLegRef} position={[-0.12, 0, -0.4]}>
+      <group ref={rightLegRef} position={[-0.12, 0, -0.4]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.3]}>
           <cylinderGeometry args={[0.06, 0.04, 0.65, 8]} />
           <meshStandardMaterial color="#ffd6a5" />
         </mesh>
       </group>
-      <group ref={rightLegRef} position={[0.12, 0, -0.4]}>
+      <group ref={leftLegRef} position={[0.12, 0, -0.4]}>
         <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.3]}>
           <cylinderGeometry args={[0.06, 0.04, 0.65, 8]} />
           <meshStandardMaterial color="#ffd6a5" />
