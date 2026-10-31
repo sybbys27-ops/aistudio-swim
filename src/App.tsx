@@ -49,6 +49,7 @@ export default function App() {
                     <SwimmerModel
             rollAngle={sim.roll}
             pitchAngle={sim.params.bodyPitch}
+            strokeTime={sim.strokeTime}
             rightArmPhase={sim.rightArmPhase}
             leftArmPhase={sim.leftArmPhase}
             rightArmTime={sim.rightArmTime}
@@ -125,7 +126,7 @@ export default function App() {
               {isRunning ? "Stop Session" : "Start Simulation"}
             </button>
             <button 
-              onClick={() => sim.setParams({ rollingAngle: 45, strokeInterval: 4, glideHold: 0.5, bodyPitch: -1 })}
+              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 3, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
               className="w-full py-3 rounded-2xl bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all"
             >
               Reset to Optimal
