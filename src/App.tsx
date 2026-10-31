@@ -49,10 +49,10 @@ export default function App() {
                     <SwimmerModel
             rollAngle={sim.roll}
             pitchAngle={sim.params.bodyPitch}
-            leftArmPhase={sim.leftArmPhase}
             rightArmPhase={sim.rightArmPhase}
-            leftArmTime={sim.leftArmTime}
+            leftArmPhase={sim.leftArmPhase}
             rightArmTime={sim.rightArmTime}
+            leftArmTime={sim.leftArmTime}
             distance={sim.distance}
             yOffset={sim.yOffset}
             state={sim.state}
