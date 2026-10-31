@@ -31,12 +31,12 @@ export function useSimulation() {
   const [metrics, setMetrics] = useState<SimulationMetrics>({ thrust: 0, drag: 0, efficiency: 0, strokeRate: 0 });
   const [history, setHistory] = useState<MetricPoint[]>([]);
 
-  const [leftArmPhase, setLeftArmPhase] = useState<ArmPhase>(ArmPhase.Idle);
   const [rightArmPhase, setRightArmPhase] = useState<ArmPhase>(ArmPhase.Idle);
-  const [leftArmTime, setLeftArmTime] = useState(0);
+  const [leftArmPhase, setLeftArmPhase] = useState<ArmPhase>(ArmPhase.Idle);
   const [rightArmTime, setRightArmTime] = useState(0);
+  const [leftArmTime, setLeftArmTime] = useState(0);
 
-  const [activeArm, setActiveArm] = useState<"Left" | "Right" | "Both" | "None">("None");
+  const [activeArm, setActiveArm] = useState<"Right" | "Left" | "Both" | "None">("None");
   const [glideHoldRemaining, setGlideHoldRemaining] = useState(0);
 
   const requestRef = useRef<number>(null);
@@ -52,13 +52,13 @@ export function useSimulation() {
     energy: 100,
     yOffset: 0,
     rollDirection: 1,
-    leftArmTime: 0,
     rightArmTime: 0,
-    leftArmPhase: ArmPhase.Idle,
+    leftArmTime: 0,
     rightArmPhase: ArmPhase.Idle,
+    leftArmPhase: ArmPhase.Idle,
     glideHoldRemaining: 0,
     lastStrokeStartTime: -999,
-    nextStrokeArm: "Left" as "Left" | "Right",
+    nextStrokeArm: "Right" as "Right" | "Left",
     firstStrokeStarted: false,
     strokeCount: 0,
     thrust: 0,
@@ -131,21 +131,21 @@ export function useSimulation() {
       d.state = SimulationState.Sinking;
       setState(SimulationState.Sinking);
       d.thrust = 0;
-      d.leftArmPhase = ArmPhase.Idle;
       d.rightArmPhase = ArmPhase.Idle;
+      d.leftArmPhase = ArmPhase.Idle;
       setActiveArm("None");
-      setLeftArmPhase(ArmPhase.Idle);
       setRightArmPhase(ArmPhase.Idle);
+      setLeftArmPhase(ArmPhase.Idle);
     }
 
     // Update arm times for all active movement states
     if (d.state === SimulationState.InitialRolling || 
         d.state === SimulationState.GlideHold || 
         d.state === SimulationState.Running) {
-      d.leftArmTime += dt;
       d.rightArmTime += dt;
-      d.leftArmPhase = updateArmPhase(d.leftArmTime);
+      d.leftArmTime += dt;
       d.rightArmPhase = updateArmPhase(d.rightArmTime);
+      d.leftArmPhase = updateArmPhase(d.leftArmTime);
     }
 
     if (d.state === SimulationState.InitialRolling) {
@@ -165,11 +165,11 @@ export function useSimulation() {
         if (!d.firstStrokeStarted) {
           d.firstStrokeStarted = true;
           d.lastStrokeStartTime = d.time;
-          d.leftArmTime = 0;
-          d.leftArmPhase = ArmPhase.Catch;
-          d.rightArmTime = 4.0; 
-          d.rightArmPhase = ArmPhase.ExtendedForward;
-          d.nextStrokeArm = "Right";
+          d.rightArmTime = 0;
+          d.rightArmPhase = ArmPhase.Catch;
+          d.leftArmTime = 4.0; 
+          d.leftArmPhase = ArmPhase.ExtendedForward;
+          d.nextStrokeArm = "Left";
           d.energy = Math.max(0, d.energy - 8);
           d.strokeCount++;
           d.rollDirection = -1; // Start rolling to opposite side when stroke starts
@@ -182,14 +182,14 @@ export function useSimulation() {
           d.energy = Math.max(0, d.energy - 8);
           d.rollDirection *= -1; // Reverse roll direction for new stroke
           
-          if (d.nextStrokeArm === "Left") {
-            d.leftArmTime = 0;
-            d.leftArmPhase = ArmPhase.Catch;
-            d.nextStrokeArm = "Right";
-          } else {
+          if (d.nextStrokeArm === "Right") {
             d.rightArmTime = 0;
             d.rightArmPhase = ArmPhase.Catch;
             d.nextStrokeArm = "Left";
+          } else {
+            d.leftArmTime = 0;
+            d.leftArmPhase = ArmPhase.Catch;
+            d.nextStrokeArm = "Right";
           }
           d.state = SimulationState.Running;
           setState(SimulationState.Running);
@@ -220,8 +220,8 @@ export function useSimulation() {
     }
 
     // Physics Calculation
-    const leftThrust = calculateThrust(d.leftArmPhase, d.leftArmTime, d.roll);
-    const rightThrust = calculateThrust(d.rightArmPhase, d.rightArmTime, d.roll);
+    const leftThrust = calculateThrust(d.rightArmPhase, d.rightArmTime, d.roll);
+    const rightThrust = calculateThrust(d.leftArmPhase, d.leftArmTime, d.roll);
     d.thrust = leftThrust + rightThrust;
     d.drag = calculateDrag(d.speed, p.bodyPitch);
 
@@ -241,12 +241,12 @@ export function useSimulation() {
         d.state = SimulationState.Finished;
         setState(SimulationState.Finished);
         setActiveArm("None");
-        setLeftArmPhase(ArmPhase.ExtendedForward);
         setRightArmPhase(ArmPhase.ExtendedForward);
-        d.leftArmTime = 4.0;
+        setLeftArmPhase(ArmPhase.ExtendedForward);
         d.rightArmTime = 4.0;
-        setLeftArmTime(4.0);
+        d.leftArmTime = 4.0;
         setRightArmTime(4.0);
+        setLeftArmTime(4.0);
         if (requestRef.current) cancelAnimationFrame(requestRef.current);
       } else {
         requestRef.current = requestAnimationFrame(animate);
@@ -272,17 +272,17 @@ export function useSimulation() {
       efficiency: d.thrust > 0 ? (d.speed / d.thrust) * 1000 : 0,
       strokeRate: d.strokeCount > 0 ? (d.strokeCount / d.time) * 60 : 0
     });
-    setLeftArmPhase(d.leftArmPhase);
     setRightArmPhase(d.rightArmPhase);
-    setLeftArmTime(d.leftArmTime);
+    setLeftArmPhase(d.leftArmPhase);
     setRightArmTime(d.rightArmTime);
+    setLeftArmTime(d.leftArmTime);
     setGlideHoldRemaining(d.glideHoldRemaining);
     
-    const isLeftActive = d.leftArmPhase !== ArmPhase.Idle && d.leftArmPhase !== ArmPhase.ExtendedForward;
-    const isRightActive = d.rightArmPhase !== ArmPhase.Idle && d.rightArmPhase !== ArmPhase.ExtendedForward;
+    const isLeftActive = d.rightArmPhase !== ArmPhase.Idle && d.rightArmPhase !== ArmPhase.ExtendedForward;
+    const isRightActive = d.leftArmPhase !== ArmPhase.Idle && d.leftArmPhase !== ArmPhase.ExtendedForward;
     if (isLeftActive && isRightActive) setActiveArm("Both");
-    else if (isLeftActive) setActiveArm("Left");
-    else if (isRightActive) setActiveArm("Right");
+    else if (isLeftActive) setActiveArm("Right");
+    else if (isRightActive) setActiveArm("Left");
     else setActiveArm("None");
   };
 
@@ -298,13 +298,13 @@ export function useSimulation() {
       energy: 100,
       yOffset: 0,
       rollDirection: 1, // Start by rolling right shoulder up
-      leftArmTime: 4.0, // Start with arms extended
-      rightArmTime: 4.0,
-      leftArmPhase: ArmPhase.ExtendedForward,
+      rightArmTime: 4.0, // Start with arms extended
+      leftArmTime: 4.0,
       rightArmPhase: ArmPhase.ExtendedForward,
+      leftArmPhase: ArmPhase.ExtendedForward,
       glideHoldRemaining: 0,
       lastStrokeStartTime: -999,
-      nextStrokeArm: "Left",
+      nextStrokeArm: "Right",
       firstStrokeStarted: false,
       strokeCount: 0,
       thrust: 0,
@@ -342,10 +342,10 @@ export function useSimulation() {
     yOffset,
     metrics,
     history,
-    leftArmPhase,
     rightArmPhase,
-    leftArmTime,
+    leftArmPhase,
     rightArmTime,
+    leftArmTime,
     activeArm,
     glideHoldRemaining,
     start,
