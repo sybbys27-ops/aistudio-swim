@@ -256,7 +256,7 @@ export function useSimulation() {
           d.state = SimulationState.Running;
           d.strokeTimelineTime = 0;
           d.strokeCount = 1;
-          d.energy = Math.max(0, d.energy - 8);
+          d.energy = Math.max(0, d.energy - 4);
           d.rightArmTime = 0;
           d.rightArmPhase = ArmPhase.Catch;
           d.leftArmTime = strokeTime;
@@ -279,7 +279,7 @@ export function useSimulation() {
         if (newStrokeCount > d.strokeCount) {
           d.energy = Math.max(
             0,
-            d.energy - (newStrokeCount - d.strokeCount) * 8
+            d.energy - (newStrokeCount - d.strokeCount) * 4
           );
           d.strokeCount = newStrokeCount;
         }
@@ -301,7 +301,8 @@ export function useSimulation() {
       d.thrust = rightThrust + leftThrust;
       d.drag = calculateDrag(d.speed, p.bodyPitch);
 
-      const acceleration = (d.thrust - d.drag) / SWIMMER_MASS;
+      const effectiveDrag = d.thrust > 0 ? d.drag : d.drag * 0.5;
+      const acceleration = (d.thrust - effectiveDrag) / SWIMMER_MASS;
       d.speed = Math.max(MIN_KICK_SPEED, d.speed + acceleration * dt);
       d.distance += d.speed * dt;
 
