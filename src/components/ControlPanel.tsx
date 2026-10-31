@@ -11,7 +11,7 @@ interface ControlPanelProps {
 
 export function ControlPanel({ params, setParams }: ControlPanelProps) {
   const strokeTime = params.rollingTime + params.glideHold;
-  const strokeIntervalMax = Math.min(6, Math.floor(strokeTime * 2) / 2);
+  const strokeIntervalMax = Math.min(6, Math.floor(strokeTime * 4) / 4);
 
   const updateParam = (key: keyof SimulationParams, value: number) => {
     if (key === "rollingTime" || key === "glideHold") {
@@ -23,7 +23,7 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
         [key]: value,
         strokeInterval: Math.min(
           params.strokeInterval,
-          Math.floor(nextStrokeTime * 2) / 2
+          Math.floor(nextStrokeTime * 4) / 4
         ),
       } as Partial<SimulationParams>);
       return;
@@ -33,7 +33,7 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
       setParams({
         strokeInterval: Math.min(
           value,
-          Math.floor(strokeTime * 2) / 2
+          Math.floor(strokeTime * 4) / 4
         ),
       });
       return;
@@ -59,7 +59,7 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
       label: "Rolling Time",
       icon: <Timer className="w-4 h-4" />,
       value: params.rollingTime,
-      min: 2,
+      min: 1,
       max: 4,
       step: 0.5,
       unit: "s",
@@ -85,7 +85,7 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
       value: params.strokeInterval,
       min: 2,
       max: strokeIntervalMax,
-      step: 0.5,
+      step: 0.25,
       unit: "s",
       key: "strokeInterval" as const,
       color: "text-yellow-400",
