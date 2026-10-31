@@ -11,7 +11,11 @@ interface ControlPanelProps {
 
 export function ControlPanel({ params, setParams }: ControlPanelProps) {
   const strokeTime = params.rollingTime + params.glideHold;
-  const strokeIntervalMax = Math.min(6, Math.floor(strokeTime * 4) / 4);
+  const strokeIntervalMin = 1;
+  const strokeIntervalMax = Math.max(
+    strokeIntervalMin,
+    Math.min(6, Math.floor(strokeTime * 4) / 4)
+  );
 
   const updateParam = (key: keyof SimulationParams, value: number) => {
     if (key === "rollingTime" || key === "glideHold") {
@@ -21,9 +25,12 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
 
       setParams({
         [key]: value,
-        strokeInterval: Math.min(
-          params.strokeInterval,
-          Math.floor(nextStrokeTime * 4) / 4
+        strokeInterval: Math.max(
+          strokeIntervalMin,
+          Math.min(
+            params.strokeInterval,
+            Math.floor(nextStrokeTime * 4) / 4
+          )
         ),
       } as Partial<SimulationParams>);
       return;
@@ -31,9 +38,12 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
 
     if (key === "strokeInterval") {
       setParams({
-        strokeInterval: Math.min(
-          value,
-          Math.floor(strokeTime * 4) / 4
+        strokeInterval: Math.max(
+          strokeIntervalMin,
+          Math.min(
+            value,
+            Math.floor(strokeTime * 4) / 4
+          )
         ),
       });
       return;
@@ -83,7 +93,7 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
       label: "Stroke Interval",
       icon: <Zap className="w-4 h-4" />,
       value: params.strokeInterval,
-      min: 2,
+      min: strokeIntervalMin,
       max: strokeIntervalMax,
       step: 0.25,
       unit: "s",
@@ -181,17 +191,17 @@ export function ControlPanel({ params, setParams }: ControlPanelProps) {
               min={control.min}
               max={control.max}
               step={control.step}
-              value={Math.min(control.value, control.max)}
+              value={Math.max(control.min, Math.min(control.value, control.max))}
               onChange={(e) => updateParam(control.key, parseFloat(e.target.value))}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
             <div
               className={`absolute top-0 left-0 h-full transition-all duration-300 ${control.bg.replace('/10', '/40')}`}
-              style={{ width: `${((Math.min(control.value, control.max) - control.min) / Math.max(0.001, control.max - control.min)) * 100}%` }}
+              style={{ width: `${((Math.max(control.min, Math.min(control.value, control.max)) - control.min) / Math.max(0.001, control.max - control.min)) * 100}%` }}
             />
             <div
               className="absolute top-0 h-full w-1 bg-white shadow-[0_0_10px_rgba(255,255,255,0.5)] transition-all duration-300"
-              style={{ left: `${((Math.min(control.value, control.max) - control.min) / Math.max(0.001, control.max - control.min)) * 100}%` }}
+              style={{ left: `${((Math.max(control.min, Math.min(control.value, control.max)) - control.min) / Math.max(0.001, control.max - control.min)) * 100}%` }}
             />
           </div>
 
