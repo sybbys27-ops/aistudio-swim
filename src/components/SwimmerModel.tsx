@@ -64,7 +64,8 @@ export function SwimmerModel({
       // Simulation convention: negative roll = right shoulder down.
       // Three.js Z rotation is inverted here so the visual pose follows that convention.
       groupRef.current.rotation.z = (-rollAngle * Math.PI) / 180;
-      groupRef.current.rotation.x = (pitchAngle * Math.PI) / 180;
+      // Positive Body Pitch raises the upper body; negative lowers it.
+      groupRef.current.rotation.x = (-pitchAngle * Math.PI) / 180;
       groupRef.current.position.z = distance;
       groupRef.current.position.y = yOffset;
     }
