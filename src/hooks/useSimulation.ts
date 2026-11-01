@@ -71,6 +71,28 @@ export function useSimulation() {
 
   const getStrokeTime = (p: SimulationParams) => p.rollingTime + p.glideHold;
 
+  const getStrokeEnergyCost = (p: SimulationParams) => {
+    const strokeTime = getStrokeTime(p);
+    let cost = 4;
+
+    if (p.rollingAngle <= 30) cost += 0.5;
+    if (p.rollingAngle >= 80) cost += 0.5;
+    if (strokeTime <= 1.5) cost += 0.5;
+    if (p.bodyPitch <= -4) cost += 0.5;
+    if (p.bodyPitch >= 4) cost += 0.5;
+
+    return cost;
+  };
+
+  const isGlidePhase = (timelineTime: number, p: SimulationParams) => {
+    if (p.glideHold <= 0) return false;
+    const strokeTime = getStrokeTime(p);
+    if (strokeTime <= 0) return false;
+
+    const localTime = timelineTime % strokeTime;
+    return localTime >= p.rollingTime;
+  };
+
   const updateArmPhase = (armTime: number, strokeTime: number): ArmPhase => {
     if (armTime < 0 || armTime >= strokeTime) return ArmPhase.ExtendedForward;
 
@@ -256,7 +278,7 @@ export function useSimulation() {
           d.state = SimulationState.Running;
           d.strokeTimelineTime = 0;
           d.strokeCount = 1;
-          d.energy = Math.max(0, d.energy - 4);
+          d.energy = Math.max(0, d.energy - getStrokeEnergyCost(p));
           d.rightArmTime = 0;
           d.rightArmPhase = ArmPhase.Catch;
           d.leftArmTime = strokeTime;
@@ -279,9 +301,16 @@ export function useSimulation() {
         if (newStrokeCount > d.strokeCount) {
           d.energy = Math.max(
             0,
-            d.energy - (newStrokeCount - d.strokeCount) * 4
+            d.energy -
+              (newStrokeCount - d.strokeCount) * getStrokeEnergyCost(p)
           );
           d.strokeCount = newStrokeCount;
+        }
+
+        // Recover 1 energy point per second only while the body is
+        // holding the completed roll angle during Glide Duration.
+        if (isGlidePhase(d.strokeTimelineTime, p)) {
+          d.energy = Math.min(100, d.energy + dt);
         }
       }
 
