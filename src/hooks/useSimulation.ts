@@ -337,8 +337,7 @@ export function useSimulation() {
 
       if (
         d.energy <= 0 &&
-        d.state !== SimulationState.Finished &&
-        d.state !== SimulationState.Sinking
+        d.state !== SimulationState.Finished
       ) {
         d.energy = 0;
         d.state = SimulationState.Sinking;
