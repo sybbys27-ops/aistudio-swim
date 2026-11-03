@@ -129,6 +129,21 @@ export default function App() {
         </div>
       </div>
 
+      {/* Top Energy Progress Bar */}
+      {isRunning && (
+        <div className="absolute top-[142px] left-1/2 -translate-x-1/2 z-30 w-[42%] min-w-[360px] max-w-[680px]">
+          <div className="relative h-5 border-2 border-yellow-300 bg-black/70 overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-orange-400 transition-[width] duration-200"
+              style={{ width: `${Math.max(0, Math.min(100, sim.energy))}%` }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-black">
+              {sim.energy.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Parameter Controls */}
       <div className={`absolute left-6 top-24 bottom-6 w-80 flex flex-col gap-4 transition-all duration-500 ${showControls ? "translate-x-0" : "-translate-x-[calc(100%+24px)]"}`}>
         <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl overflow-y-auto">
