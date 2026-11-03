@@ -322,7 +322,7 @@ export default function App() {
       </button>
 
       {/* Right Analytics Dashboard */}
-      <div className={`absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4 transition-all duration-500 ${showAnalytics ? "translate-x-0" : "translate-x-[calc(100%+24px)]"}`}>
+      <div className={`absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4 transition-all duration-500 z-40 ${showAnalytics ? "translate-x-0" : "translate-x-[calc(100%+24px)]"}`}>
         {/* Real-time Metrics Card */}
         <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
@@ -398,27 +398,25 @@ export default function App() {
 
       <style>{`
         @keyframes swim-feedback-float {
-          0% { opacity: 0; transform: translateY(12px); }
-          12% { opacity: 1; transform: translateY(0); }
-          70% { opacity: 1; transform: translateY(-18px); }
-          100% { opacity: 0; transform: translateY(-38px); }
+          0% { opacity: 0; transform: translateY(28px); }
+          12% { opacity: 1; transform: translateY(16px); }
+          68% { opacity: 1; transform: translateY(-34px); }
+          100% { opacity: 0; transform: translateY(-88px); }
         }
       `}</style>
 
-      {/* Live parameter feedback */}
+      {/* Live parameter feedback: right-center, behind analytics panel */}
       {isRunning && feedbackMessages.length > 0 && (
-        <div
-          className="absolute z-30 pointer-events-none flex flex-col gap-1"
-          style={{
-            left: Math.max(20, annotationPos.x - 250),
-            top: annotationPos.y + 70,
-          }}
-        >
-          {feedbackMessages.map((message) => (
+        <div className="absolute right-8 top-[42%] z-10 pointer-events-none w-[320px] h-[260px] overflow-visible">
+          {feedbackMessages.map((message, index) => (
             <div
               key={message.id}
-              className="text-sm font-black tracking-wide whitespace-nowrap"
-              style={{ animation: "swim-feedback-float 2s ease-out forwards" }}
+              className="absolute right-0 text-sm font-black tracking-wide whitespace-nowrap"
+              style={{
+                bottom: `${24 + index * 44}px`,
+                animation: "swim-feedback-float 2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards",
+                willChange: "transform, opacity",
+              }}
             >
               <span className={message.tone === "energy" ? "text-orange-400" : "text-yellow-300"}>
                 {message.label}
