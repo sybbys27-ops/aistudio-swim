@@ -82,34 +82,22 @@ export default function App() {
     }
   }, [volume]);
 
-  useEffect(() => {
-    if (sim.state === SimulationState.Finished && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-  }, [sim.state]);
-
   const handleStart = () => {
     sim.start();
 
     const audio = audioRef.current;
     if (audio) {
       audio.volume = volume / 100;
-      audio.currentTime = 0;
-      void audio.play().catch(() => {
-        // Browser may block playback until a direct user gesture.
-      });
+      if (audio.paused) {
+        void audio.play().catch(() => {
+          // Browser may block playback until a direct user gesture.
+        });
+      }
     }
   };
 
   const handleStop = () => {
     sim.stop();
-
-    const audio = audioRef.current;
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-    }
   };
 
   const activeFeedbacks = useMemo<FeedbackMessage[]>(() => {
