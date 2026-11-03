@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import { Html } from "@react-three/drei";
 import { Group } from "three";
 import { ArmPhase, SimulationState } from "../types";
 
@@ -8,7 +7,6 @@ interface SwimmerModelProps {
   rollAngle: number;
   pitchAngle: number;
   strokeTime: number;
-  strokeInterval: number;
   rightArmPhase: ArmPhase;
   leftArmPhase: ArmPhase;
   rightArmTime: number;
@@ -22,7 +20,6 @@ export function SwimmerModel({
   rollAngle,
   pitchAngle,
   strokeTime,
-  strokeInterval,
   rightArmPhase,
   leftArmPhase,
   rightArmTime,
@@ -151,22 +148,6 @@ export function SwimmerModel({
             <meshBasicMaterial color="#00ffff" transparent opacity={0.2} />
           </mesh>
 
-          {/* Anchored to the swimmer itself: local -Z is behind the legs. */}
-          <Html
-            position={[0, 0.05, -1.15]}
-            center
-            distanceFactor={8}
-            style={{ pointerEvents: "none", whiteSpace: "nowrap" }}
-          >
-            <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
-              <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
-                Roll: <span className="text-cyan-400">{rollAngle.toFixed(1)}°</span>
-                <span className="mx-2 text-gray-500">|</span>
-                Stroke Interval: <span className="text-yellow-400">{strokeInterval.toFixed(2)}s</span>
-              </span>
-            </div>
-          </Html>
         </>
       )}
     </group>
