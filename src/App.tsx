@@ -9,9 +9,37 @@ import { SpeedChart } from "./components/SpeedChart";
 import { SwimmerModel } from "./components/SwimmerModel";
 import { Pool } from "./components/Pool";
 import { SimulationState, CameraView } from "./types";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft } from "lucide-react";
+
+type FeedbackTone = "energy" | "speed";
+
+interface FeedbackMessage {
+  id: number;
+  label: string;
+  penalty: string;
+  tone: FeedbackTone;
+}
+
+function getRollingEfficiency(angle: number) {
+  const a = Math.abs(angle);
+  if (a <= 20) return 0.75 + (a / 20) * 0.10;
+  if (a <= 30) return 0.85 + ((a - 20) / 10) * 0.10;
+  if (a <= 40) return 0.95 + ((a - 30) / 10) * 0.05;
+  if (a <= 60) return 1.0;
+  if (a <= 70) return 1.0 - ((a - 60) / 10) * 0.05;
+  if (a <= 80) return 0.95 - ((a - 70) / 10) * 0.10;
+  return Math.max(0.75, 0.85 - ((a - 80) / 10) * 0.10);
+}
+
+function getStrokeTimeEfficiency(strokeTime: number) {
+  if (strokeTime >= 2.5) return 1.0;
+  if (strokeTime >= 2.0) return 0.95 + ((strokeTime - 2.0) / 0.5) * 0.05;
+  if (strokeTime >= 1.5) return 0.90 + ((strokeTime - 1.5) / 0.5) * 0.05;
+  if (strokeTime >= 1.0) return 0.825 + ((strokeTime - 1.0) / 0.5) * 0.075;
+  return 0.825;
+}
 
 function SwimmerAnnotationTracker({
   distance,
@@ -44,8 +72,111 @@ export default function App() {
   const [showControls, setShowControls] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
+  const [feedbackMessages, setFeedbackMessages] = useState<FeedbackMessage[]>([]);
+  const feedbackIdRef = useRef(0);
+  const feedbackIndexRef = useRef(0);
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
+
+  useEffect(() => {
+    if (!isRunning) {
+      setFeedbackMessages([]);
+      feedbackIndexRef.current = 0;
+      return;
+    }
+
+    const buildCandidates = (): Omit<FeedbackMessage, "id">[] => {
+      const candidates: Omit<FeedbackMessage, "id">[] = [];
+      const rollingAngle = sim.params.rollingAngle;
+      const strokeTime = sim.strokeTime;
+      const absPitch = Math.abs(sim.params.bodyPitch);
+
+      if (rollingAngle <= 30) {
+        candidates.push({
+          label: "Rolling Angle ≤ 30°",
+          penalty: "-0.5E",
+          tone: "energy",
+        });
+      }
+      if (rollingAngle >= 80) {
+        candidates.push({
+          label: "Rolling Angle ≥ 80°",
+          penalty: "-0.5E",
+          tone: "energy",
+        });
+      }
+
+      const rollingLoss = Math.round((1 - getRollingEfficiency(rollingAngle)) * 100);
+      if (rollingLoss > 0) {
+        candidates.push({
+          label: "Rolling Propel Efficiency",
+          penalty: `-${rollingLoss}%`,
+          tone: "speed",
+        });
+      }
+
+      if (strokeTime <= 1.5) {
+        candidates.push({
+          label: "Stroke Time ≤ 1.5s",
+          penalty: "-0.5E",
+          tone: "energy",
+        });
+      }
+
+      const strokeLoss = Math.round((1 - getStrokeTimeEfficiency(strokeTime)) * 100);
+      if (strokeLoss > 0) {
+        candidates.push({
+          label: "Stroke Time Efficiency",
+          penalty: `-${strokeLoss}%`,
+          tone: "speed",
+        });
+      }
+
+      if (absPitch >= 7) {
+        candidates.push({
+          label: "Body Pitch ≥ 7°",
+          penalty: "-1.0E",
+          tone: "energy",
+        });
+      } else if (absPitch >= 4) {
+        candidates.push({
+          label: "Body Pitch 4°–6°",
+          penalty: "-0.5E",
+          tone: "energy",
+        });
+      }
+
+      return candidates;
+    };
+
+    const emitNext = () => {
+      const candidates = buildCandidates();
+      if (candidates.length === 0) return;
+
+      const candidate = candidates[feedbackIndexRef.current % candidates.length];
+      feedbackIndexRef.current += 1;
+
+      const id = ++feedbackIdRef.current;
+      setFeedbackMessages((prev) => [
+        ...prev.slice(-2),
+        { ...candidate, id },
+      ]);
+
+      window.setTimeout(() => {
+        setFeedbackMessages((prev) => prev.filter((message) => message.id !== id));
+      }, 2000);
+    };
+
+    emitNext();
+    const intervalId = window.setInterval(emitNext, 700);
+
+    return () => window.clearInterval(intervalId);
+  }, [
+    isRunning,
+    sim.params.rollingAngle,
+    sim.params.bodyPitch,
+    sim.strokeTime,
+  ]);
 
   const cameraPosition = useMemo(() => {
     switch (cameraView) {
@@ -264,6 +395,39 @@ export default function App() {
       >
         {showAnalytics ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
       </button>
+
+      <style>{`
+        @keyframes swim-feedback-float {
+          0% { opacity: 0; transform: translateY(12px); }
+          12% { opacity: 1; transform: translateY(0); }
+          70% { opacity: 1; transform: translateY(-18px); }
+          100% { opacity: 0; transform: translateY(-38px); }
+        }
+      `}</style>
+
+      {/* Live parameter feedback */}
+      {isRunning && feedbackMessages.length > 0 && (
+        <div
+          className="absolute z-30 pointer-events-none flex flex-col gap-1"
+          style={{
+            left: Math.max(20, annotationPos.x - 250),
+            top: annotationPos.y + 70,
+          }}
+        >
+          {feedbackMessages.map((message) => (
+            <div
+              key={message.id}
+              className="text-sm font-black tracking-wide whitespace-nowrap"
+              style={{ animation: "swim-feedback-float 2s ease-out forwards" }}
+            >
+              <span className={message.tone === "energy" ? "text-orange-400" : "text-yellow-300"}>
+                {message.label}
+              </span>
+              <span className="ml-3 text-red-500">{message.penalty}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Swimmer annotation anchored to the projected 3D point behind the legs */}
       {isRunning && (
