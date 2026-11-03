@@ -78,8 +78,10 @@ export function useSimulation() {
     if (p.rollingAngle <= 30) cost += 0.5;
     if (p.rollingAngle >= 80) cost += 0.5;
     if (strokeTime <= 1.5) cost += 0.5;
-    if (p.bodyPitch <= -4) cost += 0.5;
-    if (p.bodyPitch >= 4) cost += 0.5;
+
+    const absPitch = Math.abs(p.bodyPitch);
+    if (absPitch >= 7) cost += 1.0;
+    else if (absPitch >= 4) cost += 0.5;
 
     return cost;
   };
@@ -162,11 +164,31 @@ export function useSimulation() {
     return startAngle + (endAngle - startAngle) * progress;
   };
 
+  const getRollingThrustEfficiency = (rollingAngle: number) => {
+    const angle = Math.abs(rollingAngle);
+
+    if (angle <= 20) return 0.75 + (angle / 20) * 0.10;
+    if (angle <= 30) return 0.85 + ((angle - 20) / 10) * 0.10;
+    if (angle <= 40) return 0.95 + ((angle - 30) / 10) * 0.05;
+    if (angle <= 60) return 1.0;
+    if (angle <= 70) return 1.0 - ((angle - 60) / 10) * 0.05;
+    if (angle <= 80) return 0.95 - ((angle - 70) / 10) * 0.10;
+    return Math.max(0.75, 0.85 - ((angle - 80) / 10) * 0.10);
+  };
+
+  const getStrokeTimeThrustEfficiency = (strokeTime: number) => {
+    if (strokeTime >= 2.5) return 1.0;
+    if (strokeTime >= 2.0) return 0.95 + ((strokeTime - 2.0) / 0.5) * 0.05;
+    if (strokeTime >= 1.5) return 0.90 + ((strokeTime - 1.5) / 0.5) * 0.05;
+    if (strokeTime >= 1.0) return 0.825 + ((strokeTime - 1.0) / 0.5) * 0.075;
+    return 0.825;
+  };
+
   const calculateThrust = (
     phase: ArmPhase,
     armTime: number,
     strokeTime: number,
-    currentRoll: number
+    rollingAngle: number
   ) => {
     if (strokeTime <= 0) return 0;
 
@@ -181,8 +203,10 @@ export function useSimulation() {
       baseThrust = 400 + Math.sin(phaseProgress * Math.PI) * 150;
     }
 
-    const rollFactor = 1 + (Math.abs(currentRoll) / 90) * 0.5;
-    return baseThrust * rollFactor * 0.5;
+    const rollingEfficiency = getRollingThrustEfficiency(rollingAngle);
+    const strokeTimeEfficiency = getStrokeTimeThrustEfficiency(strokeTime);
+
+    return baseThrust * rollingEfficiency * strokeTimeEfficiency * 0.5;
   };
 
   const calculateDrag = (currentSpeed: number, pitch: number) => {
@@ -318,13 +342,13 @@ export function useSimulation() {
         d.rightArmPhase,
         d.rightArmTime,
         strokeTime,
-        d.roll
+        p.rollingAngle
       );
       const leftThrust = calculateThrust(
         d.leftArmPhase,
         d.leftArmTime,
         strokeTime,
-        d.roll
+        p.rollingAngle
       );
 
       d.thrust = rightThrust + leftThrust;
