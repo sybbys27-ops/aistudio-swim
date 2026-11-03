@@ -393,33 +393,41 @@ export default function App() {
         </div>
       )}
 
-      {/* Finish Overlay */}
-      {sim.state === SimulationState.Finished && (
-        <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-xl flex items-center justify-center p-8">
-          <div className="max-w-lg w-full bg-gray-900 rounded-[40px] border border-white/10 p-12 text-center shadow-2xl">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/40">
-              <Activity className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-5xl font-black italic serif uppercase tracking-tighter mb-2">Session Complete</h2>
-            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-12">50m Olympic Pool Performance Data</p>
-            
-            <div className="grid grid-cols-2 gap-6 mb-12">
-              <div className="bg-white/5 rounded-3xl p-6 border border-white/5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Total Time</p>
-                <p className="text-3xl font-black italic serif text-white">{sim.time.toFixed(2)}s</p>
-              </div>
-              <div className="bg-white/5 rounded-3xl p-6 border border-white/5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Avg Speed</p>
-                <p className="text-3xl font-black italic serif text-white">{(50 / sim.time).toFixed(2)}m/s</p>
-              </div>
+      {/* Finish Result */}
+      {sim.state === SimulationState.Finished && sim.finishReason === "complete" && (
+        <div className="absolute inset-0 z-[90] pointer-events-none flex items-center justify-center">
+          <div className="w-[560px] max-w-[80vw] bg-black/55 backdrop-blur-lg border border-white/10 rounded-[32px] px-10 py-8 text-center shadow-2xl">
+            <div className="mb-7">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-blue-300 mb-2">
+                Final Score
+              </p>
+              <p className="text-7xl font-black italic tracking-tighter text-white">
+                {(sim.energy + 80 - sim.time).toFixed(1)}
+              </p>
             </div>
 
-            <button
-              onClick={sim.stop}
-              className="w-full py-5 rounded-3xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all active:scale-95"
-            >
-              Analyze New Parameters
-            </button>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Energy</p>
+                <p className="text-xl font-black text-orange-300">{sim.energy.toFixed(1)}%</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Time</p>
+                <p className="text-xl font-black text-white">{sim.time.toFixed(1)}s</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Avg Speed</p>
+                <p className="text-xl font-black text-cyan-300">{(50 / sim.time).toFixed(2)}m/s</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sim.state === SimulationState.Finished && sim.finishReason === "fail" && (
+        <div className="absolute inset-0 z-[90] pointer-events-none flex items-center justify-center">
+          <div className="text-8xl md:text-9xl font-black italic uppercase tracking-tight text-red-500 drop-shadow-2xl">
+            FAIL
           </div>
         </div>
       )}
