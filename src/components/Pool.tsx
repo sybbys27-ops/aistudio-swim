@@ -1,7 +1,9 @@
-import { ThreeElement } from "@react-three/fiber";
+import { Text } from "@react-three/drei";
 import { DoubleSide } from "three";
 
 export function Pool() {
+  const distanceMarkers = [10, 20, 30, 40];
+
   return (
     <group>
       {/* Pool Deck / Surroundings - Using 4 planes to create a hole */}
@@ -69,6 +71,23 @@ export function Pool() {
         <planeGeometry args={[1, 0.2]} />
         <meshBasicMaterial color="#000000" />
       </mesh>
+
+      {/* Distance markers - offset from the center lane line to avoid visual overlap */}
+      {distanceMarkers.map((meters) => (
+        <Text
+          key={meters}
+          position={[1.45, -1.965, meters]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          fontSize={0.8}
+          color="#ffffff"
+          anchorX="center"
+          anchorY="middle"
+          material-transparent
+          material-opacity={0.9}
+        >
+          {`${meters}m`}
+        </Text>
+      ))}
 
       {/* Water Surface - Extremely transparent to ensure swimmer visibility */}
       <mesh position={[0, 0.05, 25]} rotation={[-Math.PI / 2, 0, 0]}>
