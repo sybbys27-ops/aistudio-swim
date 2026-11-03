@@ -9,9 +9,9 @@ import { SpeedChart } from "./components/SpeedChart";
 import { SwimmerModel } from "./components/SwimmerModel";
 import { Pool } from "./components/Pool";
 import { SimulationState, CameraView } from "./types";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Vector3 } from "three";
-import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft } from "lucide-react";
+import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2 } from "lucide-react";
 
 type FeedbackTone = "energy" | "speed";
 
@@ -71,8 +71,46 @@ export default function App() {
   const [showControls, setShowControls] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
+  const [volume, setVolume] = useState(50);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  useEffect(() => {
+    if (sim.state === SimulationState.Finished && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+  }, [sim.state]);
+
+  const handleStart = () => {
+    sim.start();
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume / 100;
+      audio.currentTime = 0;
+      void audio.play().catch(() => {
+        // Browser may block playback until a direct user gesture.
+      });
+    }
+  };
+
+  const handleStop = () => {
+    sim.stop();
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+  };
 
   const activeFeedbacks = useMemo<FeedbackMessage[]>(() => {
     const items: FeedbackMessage[] = [];
@@ -150,6 +188,12 @@ export default function App() {
 
   return (
     <div className="relative w-full h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-blue-500/30">
+      <audio
+        ref={audioRef}
+        src="/audio/시간이_멈춘_바다.mp3"
+        loop
+        preload="auto"
+      />
       {/* 3D Simulation Layer */}
       <div className="absolute inset-0 z-0">
         <Canvas shadows gl={{ antialias: true }}>
@@ -201,6 +245,23 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 min-w-[220px]">
+            <Volume2 className="w-4 h-4 text-orange-300" />
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="w-36 accent-orange-400 cursor-pointer"
+              aria-label="Background music volume"
+            />
+            <span className="w-10 text-right text-[10px] font-black text-orange-300">
+              {volume}%
+            </span>
+          </div>
+
           <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
             {(["SIDE", "TOP", "FOLLOW", "FRONT"] as CameraView[]).map((view) => (
               <button
@@ -247,14 +308,14 @@ export default function App() {
           <ControlPanel 
             params={sim.params} 
             setParams={(p) => sim.setParams(prev => ({ ...prev, ...p }))} 
-            onStart={sim.start} 
-            onStop={sim.stop} 
+            onStart={handleStart} 
+            onStop={handleStop} 
             isRunning={isRunning}
           />
 
           <div className="mt-auto pt-6 border-t border-white/5 flex flex-col gap-3">
             <button
-              onClick={isRunning ? sim.stop : sim.start}
+              onClick={isRunning ? handleStop : handleStart}
               className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest transition-all active:scale-95 ${
                 isRunning 
                   ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30" 
