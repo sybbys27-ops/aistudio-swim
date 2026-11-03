@@ -1,4 +1,4 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei/core/PerspectiveCamera";
 import { OrbitControls } from "@react-three/drei/core/OrbitControls";
 import { Sky } from "@react-three/drei/core/Sky";
@@ -10,13 +10,40 @@ import { SwimmerModel } from "./components/SwimmerModel";
 import { Pool } from "./components/Pool";
 import { SimulationState, CameraView } from "./types";
 import { useState, useMemo } from "react";
+import { Vector3 } from "three";
 import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft } from "lucide-react";
+
+function SwimmerAnnotationTracker({
+  distance,
+  onUpdate,
+}: {
+  distance: number;
+  onUpdate: (position: { x: number; y: number }) => void;
+}) {
+  const { camera, size } = useThree();
+  const point = useMemo(() => new Vector3(), []);
+
+  useFrame(() => {
+    // Swimmer moves along +Z. Legs trail toward -Z, so place the label
+    // 1.15m behind the swimmer's body center.
+    point.set(0, 0.05, distance - 1.15);
+    point.project(camera);
+
+    onUpdate({
+      x: (point.x * 0.5 + 0.5) * size.width,
+      y: (-point.y * 0.5 + 0.5) * size.height,
+    });
+  });
+
+  return null;
+}
 
 export default function App() {
   const sim = useSimulation();
   const [cameraView, setCameraView] = useState<CameraView>("SIDE");
   const [showControls, setShowControls] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(true);
+  const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
 
@@ -51,7 +78,6 @@ export default function App() {
             rollAngle={sim.roll}
             pitchAngle={sim.params.bodyPitch}
             strokeTime={sim.strokeTime}
-            strokeInterval={sim.params.strokeInterval}
             rightArmPhase={sim.rightArmPhase}
             leftArmPhase={sim.leftArmPhase}
             rightArmTime={sim.rightArmTime}
@@ -59,6 +85,10 @@ export default function App() {
             distance={sim.distance}
             yOffset={sim.yOffset}
             state={sim.state}
+          />
+          <SwimmerAnnotationTracker
+            distance={sim.distance}
+            onUpdate={setAnnotationPos}
           />
           <Pool />
         </Canvas>
@@ -219,6 +249,23 @@ export default function App() {
       >
         {showAnalytics ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
       </button>
+
+      {/* Swimmer annotation anchored to the projected 3D point behind the legs */}
+      {isRunning && (
+        <div
+          className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2"
+          style={{ left: annotationPos.x, top: annotationPos.y }}
+        >
+          <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
+            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+              Roll: <span className="text-cyan-400">{sim.roll.toFixed(1)}°</span>
+              <span className="mx-2 text-gray-500">|</span>
+              Stroke Interval: <span className="text-yellow-400">{sim.params.strokeInterval.toFixed(2)}s</span>
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Finish Overlay */}
       {sim.state === SimulationState.Finished && (
