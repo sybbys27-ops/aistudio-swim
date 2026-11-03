@@ -40,7 +40,7 @@ function SwimmerAnnotationTracker({
 
 export default function App() {
   const sim = useSimulation();
-  const [cameraView, setCameraView] = useState<CameraView>("SIDE");
+  const [cameraView, setCameraView] = useState<CameraView>("FOLLOW");
   const [showControls, setShowControls] = useState(true);
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
@@ -137,7 +137,7 @@ export default function App() {
               className="absolute inset-y-0 left-0 bg-orange-400 transition-[width] duration-200"
               style={{ width: `${Math.max(0, Math.min(100, sim.energy))}%` }}
             />
-            <div className="absolute inset-0 flex items-center justify-center text-sm font-black text-black">
+            <div className={`absolute inset-0 flex items-center justify-center text-sm font-black ${sim.energy < 50 ? "text-orange-400" : "text-black"}`}>
               {sim.energy.toFixed(1)}%
             </div>
           </div>
@@ -276,7 +276,7 @@ export default function App() {
             <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
               Roll: <span className="text-cyan-400">{sim.roll.toFixed(1)}°</span>
               <span className="mx-2 text-gray-500">|</span>
-              Stroke Interval: <span className="text-yellow-400">{sim.params.strokeInterval.toFixed(2)}s</span>
+              Elapsed: <span className="text-yellow-400">{sim.time.toFixed(1)}s</span>
             </span>
           </div>
         </div>
