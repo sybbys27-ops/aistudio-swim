@@ -32,6 +32,7 @@ export function useSimulation() {
   const [roll, setRoll] = useState(0);
   const [energy, setEnergy] = useState(100);
   const [yOffset, setYOffset] = useState(0);
+  const [finishReason, setFinishReason] = useState<"complete" | "fail" | null>(null);
   const [metrics, setMetrics] = useState<SimulationMetrics>({
     thrust: 0,
     drag: 0,
@@ -272,6 +273,7 @@ export function useSimulation() {
       if (d.yOffset <= -2) {
         d.yOffset = -2;
         d.state = SimulationState.Finished;
+        setFinishReason("fail");
         setState(SimulationState.Finished);
         syncReactState();
         return;
@@ -381,6 +383,7 @@ export function useSimulation() {
         d.leftArmPhase = ArmPhase.ExtendedForward;
         d.rightArmTime = strokeTime;
         d.leftArmTime = strokeTime;
+        setFinishReason("complete");
         setState(SimulationState.Finished);
       }
     }
@@ -440,6 +443,7 @@ export function useSimulation() {
     setDistance(0);
     setRoll(0);
     setEnergy(100);
+    setFinishReason(null);
     setActiveArm("None");
 
     lastTimeRef.current = 0;
@@ -449,6 +453,7 @@ export function useSimulation() {
   const stop = () => {
     if (requestRef.current) cancelAnimationFrame(requestRef.current);
     simData.current.state = SimulationState.Stopped;
+    setFinishReason(null);
     setState(SimulationState.Stopped);
   };
 
@@ -469,6 +474,7 @@ export function useSimulation() {
     roll,
     energy,
     yOffset,
+    finishReason,
     metrics,
     history,
     rightArmPhase,
