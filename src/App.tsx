@@ -237,6 +237,8 @@ export default function App() {
                 <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
                 <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
                   Body Pitch: <span className="text-blue-400">{sim.params.bodyPitch}°</span>
+                  <span className="mx-2 text-gray-500">|</span>
+                  Roll: <span className="text-cyan-400">{sim.roll.toFixed(1)}°</span>
                 </span>
               </div>
             </div>
