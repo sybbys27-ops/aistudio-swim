@@ -16,6 +16,7 @@ export default function App() {
   const sim = useSimulation();
   const [cameraView, setCameraView] = useState<CameraView>("SIDE");
   const [showControls, setShowControls] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(true);
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
 
@@ -144,7 +145,7 @@ export default function App() {
       </button>
 
       {/* Right Analytics Dashboard */}
-      <div className="absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4">
+      <div className={`absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4 transition-all duration-500 ${showAnalytics ? "translate-x-0" : "translate-x-[calc(100%+24px)]"}`}>
         {/* Real-time Metrics Card */}
         <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
@@ -209,6 +210,14 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Toggle Analytics Button */}
+      <button
+        onClick={() => setShowAnalytics(!showAnalytics)}
+        className={`absolute top-1/2 -translate-y-1/2 z-50 w-8 h-20 bg-black/60 backdrop-blur-xl border border-white/10 rounded-l-xl flex items-center justify-center text-gray-400 hover:text-white transition-all ${showAnalytics ? "right-[384px]" : "right-0"}`}
+      >
+        {showAnalytics ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+      </button>
 
       {/* 3D Scene Annotations */}
       <div className="absolute inset-0 pointer-events-none z-10">
