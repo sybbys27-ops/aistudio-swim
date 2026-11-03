@@ -29,6 +29,11 @@ export default function App() {
     }
   }, [cameraView, sim.distance]);
 
+  const annotationPositionClass =
+    cameraView === "FOLLOW" || cameraView === "FRONT"
+      ? "left-[42%] top-[57%]"
+      : "left-1/2 top-1/2";
+
   return (
     <div className="relative w-full h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-blue-500/30">
       {/* 3D Simulation Layer */}
@@ -223,7 +228,7 @@ export default function App() {
       <div className="absolute inset-0 pointer-events-none z-10">
         {isRunning && (
           <div 
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+            className={`absolute ${annotationPositionClass} -translate-x-1/2 -translate-y-1/2`}
           >
             {/* Vertical Center Line - Static */}
             <div className="absolute left-1/2 -translate-x-1/2 -top-12 w-px h-24 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
