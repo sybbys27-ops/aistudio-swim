@@ -29,11 +29,6 @@ export default function App() {
     }
   }, [cameraView, sim.distance]);
 
-  const annotationPositionClass =
-    cameraView === "FOLLOW" || cameraView === "FRONT"
-      ? "left-[42%] top-[57%]"
-      : "left-1/2 top-1/2";
-
   return (
     <div className="relative w-full h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-blue-500/30">
       {/* 3D Simulation Layer */}
@@ -56,6 +51,7 @@ export default function App() {
             rollAngle={sim.roll}
             pitchAngle={sim.params.bodyPitch}
             strokeTime={sim.strokeTime}
+            strokeInterval={sim.params.strokeInterval}
             rightArmPhase={sim.rightArmPhase}
             leftArmPhase={sim.leftArmPhase}
             rightArmTime={sim.rightArmTime}
@@ -223,33 +219,6 @@ export default function App() {
       >
         {showAnalytics ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
       </button>
-
-      {/* 3D Scene Annotations */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        {isRunning && (
-          <div 
-            className={`absolute ${annotationPositionClass} -translate-x-1/2 -translate-y-1/2`}
-          >
-            {/* Vertical Center Line - Static */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-12 w-px h-24 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-            
-            {/* Pitch Label - Static and upright */}
-            <div className="absolute left-16 top-0 -translate-y-1/2 flex items-center gap-0">
-              {/* Connecting horizontal line */}
-              <div className="w-4 h-px bg-blue-500/50" />
-              
-              <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
-                  Roll: <span className="text-cyan-400">{sim.roll.toFixed(1)}°</span>
-                  <span className="mx-2 text-gray-500">|</span>
-                  Stroke Interval: <span className="text-yellow-400">{sim.params.strokeInterval.toFixed(2)}s</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Finish Overlay */}
       {sim.state === SimulationState.Finished && (
