@@ -26,7 +26,7 @@ function SwimmerAnnotationTracker({
   useFrame(() => {
     // Swimmer moves along +Z. Legs trail toward -Z, so place the label
     // 1.15m behind the swimmer's body center.
-    point.set(0, 0.05, distance - 1.15);
+    point.set(0, 0.55, distance - 1.15);
     point.project(camera);
 
     onUpdate({
