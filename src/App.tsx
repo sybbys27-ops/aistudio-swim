@@ -359,7 +359,7 @@ export default function App() {
 
       {/* Current parameter penalties: fixed list in right-center */}
       {isRunning && activeFeedbacks.length > 0 && (
-        <div className="absolute right-[250px] top-[44%] z-10 pointer-events-none w-[320px]">
+        <div className="absolute left-[39%] top-[73%] z-10 pointer-events-none w-[320px]">
           <div className="flex flex-col gap-3">
             {activeFeedbacks.map((message, index) => (
               <div
