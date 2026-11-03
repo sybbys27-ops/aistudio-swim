@@ -1,4 +1,4 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { PerspectiveCamera } from "@react-three/drei/core/PerspectiveCamera";
 import { OrbitControls } from "@react-three/drei/core/OrbitControls";
 import { Sky } from "@react-three/drei/core/Sky";
@@ -9,15 +9,161 @@ import { SpeedChart } from "./components/SpeedChart";
 import { SwimmerModel } from "./components/SwimmerModel";
 import { Pool } from "./components/Pool";
 import { SimulationState, CameraView } from "./types";
-import { useState, useMemo } from "react";
-import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft } from "lucide-react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Vector3 } from "three";
+import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2 } from "lucide-react";
+
+type FeedbackTone = "energy" | "speed";
+
+interface FeedbackMessage {
+  label: string;
+  penalty: string;
+  tone: FeedbackTone;
+}
+
+function getRollingEfficiency(angle: number) {
+  const a = Math.abs(angle);
+  if (a <= 20) return 0.75 + (a / 20) * 0.10;
+  if (a <= 30) return 0.85 + ((a - 20) / 10) * 0.10;
+  if (a <= 40) return 0.95 + ((a - 30) / 10) * 0.05;
+  if (a <= 60) return 1.0;
+  if (a <= 70) return 1.0 - ((a - 60) / 10) * 0.05;
+  if (a <= 80) return 0.95 - ((a - 70) / 10) * 0.10;
+  return Math.max(0.75, 0.85 - ((a - 80) / 10) * 0.10);
+}
+
+function getStrokeTimeEfficiency(strokeTime: number) {
+  if (strokeTime >= 2.5) return 1.0;
+  if (strokeTime >= 2.0) return 0.95 + ((strokeTime - 2.0) / 0.5) * 0.05;
+  if (strokeTime >= 1.5) return 0.90 + ((strokeTime - 1.5) / 0.5) * 0.05;
+  if (strokeTime >= 1.0) return 0.825 + ((strokeTime - 1.0) / 0.5) * 0.075;
+  return 0.825;
+}
+
+function SwimmerAnnotationTracker({
+  distance,
+  onUpdate,
+}: {
+  distance: number;
+  onUpdate: (position: { x: number; y: number }) => void;
+}) {
+  const { camera, size } = useThree();
+  const point = useMemo(() => new Vector3(), []);
+
+  useFrame(() => {
+    // Swimmer moves along +Z. Legs trail toward -Z, so place the label
+    // 1.15m behind the swimmer's body center.
+    point.set(0, 0.55, distance - 1.15);
+    point.project(camera);
+
+    onUpdate({
+      x: (point.x * 0.5 + 0.5) * size.width,
+      y: (-point.y * 0.5 + 0.5) * size.height,
+    });
+  });
+
+  return null;
+}
 
 export default function App() {
   const sim = useSimulation();
-  const [cameraView, setCameraView] = useState<CameraView>("SIDE");
+  const [cameraView, setCameraView] = useState<CameraView>("FOLLOW");
   const [showControls, setShowControls] = useState(true);
+  const [showAnalytics, setShowAnalytics] = useState(true);
+  const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
+  const [volume, setVolume] = useState(50);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  const handleStart = () => {
+    sim.start();
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.volume = volume / 100;
+      if (audio.paused) {
+        void audio.play().catch(() => {
+          // Browser may block playback until a direct user gesture.
+        });
+      }
+    }
+  };
+
+  const handleStop = () => {
+    sim.stop();
+  };
+
+  const activeFeedbacks = useMemo<FeedbackMessage[]>(() => {
+    const items: FeedbackMessage[] = [];
+    const rollingAngle = sim.params.rollingAngle;
+    const strokeTime = sim.strokeTime;
+    const absPitch = Math.abs(sim.params.bodyPitch);
+
+    if (rollingAngle <= 30) {
+      items.push({
+        label: "Rolling Angle ≤ 30°",
+        penalty: "-0.5E",
+        tone: "energy",
+      });
+    }
+
+    if (rollingAngle >= 80) {
+      items.push({
+        label: "Rolling Angle ≥ 80°",
+        penalty: "-0.5E",
+        tone: "energy",
+      });
+    }
+
+    const rollingLoss = Math.round((1 - getRollingEfficiency(rollingAngle)) * 100);
+    if (rollingLoss > 0) {
+      items.push({
+        label: "Rolling Propel Efficiency",
+        penalty: `-${rollingLoss}%`,
+        tone: "speed",
+      });
+    }
+
+    if (strokeTime <= 1.5) {
+      items.push({
+        label: "Stroke Time ≤ 1.5s",
+        penalty: "-0.5E",
+        tone: "energy",
+      });
+    }
+
+    const strokeLoss = Math.round((1 - getStrokeTimeEfficiency(strokeTime)) * 100);
+    if (strokeLoss > 0) {
+      items.push({
+        label: "Stroke Time Efficiency",
+        penalty: `-${strokeLoss}%`,
+        tone: "speed",
+      });
+    }
+
+    if (absPitch >= 7) {
+      items.push({
+        label: "Body Pitch ≥ 7°",
+        penalty: "-1.0E",
+        tone: "energy",
+      });
+    } else if (absPitch >= 4) {
+      items.push({
+        label: "Body Pitch 4°–6°",
+        penalty: "-0.5E",
+        tone: "energy",
+      });
+    }
+
+    return items;
+  }, [sim.params.rollingAngle, sim.params.bodyPitch, sim.strokeTime]);
 
   const cameraPosition = useMemo(() => {
     switch (cameraView) {
@@ -30,6 +176,12 @@ export default function App() {
 
   return (
     <div className="relative w-full h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-blue-500/30">
+      <audio
+        ref={audioRef}
+        src="/audio/시간이_멈춘_바다.mp3"
+        loop
+        preload="auto"
+      />
       {/* 3D Simulation Layer */}
       <div className="absolute inset-0 z-0">
         <Canvas shadows gl={{ antialias: true }}>
@@ -49,13 +201,18 @@ export default function App() {
                     <SwimmerModel
             rollAngle={sim.roll}
             pitchAngle={sim.params.bodyPitch}
-            leftArmPhase={sim.leftArmPhase}
+            strokeTime={sim.strokeTime}
             rightArmPhase={sim.rightArmPhase}
-            leftArmTime={sim.leftArmTime}
+            leftArmPhase={sim.leftArmPhase}
             rightArmTime={sim.rightArmTime}
+            leftArmTime={sim.leftArmTime}
             distance={sim.distance}
             yOffset={sim.yOffset}
             state={sim.state}
+          />
+          <SwimmerAnnotationTracker
+            distance={sim.distance}
+            onUpdate={setAnnotationPos}
           />
           <Pool />
         </Canvas>
@@ -76,6 +233,23 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 min-w-[220px]">
+            <Volume2 className="w-4 h-4 text-orange-300" />
+            <input
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              value={volume}
+              onChange={(e) => setVolume(Number(e.target.value))}
+              className="w-36 accent-orange-400 cursor-pointer"
+              aria-label="Background music volume"
+            />
+            <span className="w-10 text-right text-[10px] font-black text-orange-300">
+              {volume}%
+            </span>
+          </div>
+
           <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
             {(["SIDE", "TOP", "FOLLOW", "FRONT"] as CameraView[]).map((view) => (
               <button
@@ -96,6 +270,21 @@ export default function App() {
         </div>
       </div>
 
+      {/* Top Energy Progress Bar */}
+      {isRunning && (
+        <div className="absolute top-[142px] left-1/2 -translate-x-1/2 z-30 w-[42%] min-w-[360px] max-w-[680px]">
+          <div className="relative h-5 border-2 border-yellow-300 bg-black/70 overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-orange-400 transition-[width] duration-200"
+              style={{ width: `${Math.max(0, Math.min(100, sim.energy))}%` }}
+            />
+            <div className={`absolute inset-0 flex items-center justify-center text-sm font-black ${sim.energy < 50 ? "text-orange-400" : "text-black"}`}>
+              {sim.energy.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Left Parameter Controls */}
       <div className={`absolute left-6 top-24 bottom-6 w-80 flex flex-col gap-4 transition-all duration-500 ${showControls ? "translate-x-0" : "-translate-x-[calc(100%+24px)]"}`}>
         <div className="flex-1 bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 flex flex-col gap-6 shadow-2xl overflow-y-auto">
@@ -107,14 +296,14 @@ export default function App() {
           <ControlPanel 
             params={sim.params} 
             setParams={(p) => sim.setParams(prev => ({ ...prev, ...p }))} 
-            onStart={sim.start} 
-            onStop={sim.stop} 
+            onStart={handleStart} 
+            onStop={handleStop} 
             isRunning={isRunning}
           />
 
           <div className="mt-auto pt-6 border-t border-white/5 flex flex-col gap-3">
             <button
-              onClick={isRunning ? sim.stop : sim.start}
+              onClick={isRunning ? handleStop : handleStart}
               className={`w-full py-4 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest transition-all active:scale-95 ${
                 isRunning 
                   ? "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30" 
@@ -125,7 +314,7 @@ export default function App() {
               {isRunning ? "Stop Session" : "Start Simulation"}
             </button>
             <button 
-              onClick={() => sim.setParams({ rollingAngle: 45, strokeInterval: 4, glideHold: 0.5, bodyPitch: -1 })}
+              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 3, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
               className="w-full py-3 rounded-2xl bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all"
             >
               Reset to Optimal
@@ -143,7 +332,7 @@ export default function App() {
       </button>
 
       {/* Right Analytics Dashboard */}
-      <div className="absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4">
+      <div className={`absolute right-6 top-24 bottom-6 w-96 flex flex-col gap-4 transition-all duration-500 z-40 ${showAnalytics ? "translate-x-0" : "translate-x-[calc(100%+24px)]"}`}>
         {/* Real-time Metrics Card */}
         <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-2xl flex flex-col gap-6">
           <div className="flex items-center justify-between">
@@ -209,58 +398,85 @@ export default function App() {
         </div>
       </div>
 
-      {/* 3D Scene Annotations */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        {isRunning && (
-          <div 
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-          >
-            {/* Vertical Center Line - Static */}
-            <div className="absolute left-1/2 -translate-x-1/2 -top-12 w-px h-24 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-            
-            {/* Pitch Label - Static and upright */}
-            <div className="absolute left-16 top-0 -translate-y-1/2 flex items-center gap-0">
-              {/* Connecting horizontal line */}
-              <div className="w-4 h-px bg-blue-500/50" />
-              
-              <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
-                <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
-                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
-                  Body Pitch: <span className="text-blue-400">{sim.params.bodyPitch}°</span>
+      {/* Toggle Analytics Button */}
+      <button
+        onClick={() => setShowAnalytics(!showAnalytics)}
+        className={`absolute top-1/2 -translate-y-1/2 z-50 w-8 h-20 bg-black/60 backdrop-blur-xl border border-white/10 rounded-l-xl flex items-center justify-center text-gray-400 hover:text-white transition-all ${showAnalytics ? "right-[384px]" : "right-0"}`}
+      >
+        {showAnalytics ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+      </button>
+
+      {/* Current parameter penalties: fixed list in right-center */}
+      {isRunning && activeFeedbacks.length > 0 && (
+        <div className="absolute left-[39%] top-[73%] z-10 pointer-events-none w-[320px]">
+          <div className="flex flex-col gap-3">
+            {activeFeedbacks.map((message, index) => (
+              <div
+                key={`${message.label}-${index}`}
+                className="text-sm font-black tracking-wide whitespace-nowrap"
+              >
+                <span className={message.tone === "energy" ? "text-orange-400" : "text-yellow-300"}>
+                  {message.label}
                 </span>
+                <span className="ml-3 text-red-500">{message.penalty}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Swimmer annotation anchored to the projected 3D point behind the legs */}
+      {isRunning && (
+        <div
+          className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2"
+          style={{ left: annotationPos.x, top: annotationPos.y }}
+        >
+          <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
+            <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
+            <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white">
+              Roll: <span className="text-cyan-400">{sim.roll.toFixed(1)}°</span>
+              <span className="mx-2 text-gray-500">|</span>
+              Elapsed: <span className="text-yellow-400">{sim.time.toFixed(1)}s</span>
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Finish Result */}
+      {sim.state === SimulationState.Finished && sim.finishReason === "complete" && (
+        <div className="absolute inset-0 z-[90] pointer-events-none flex items-center justify-center">
+          <div className="w-[560px] max-w-[80vw] bg-black/55 backdrop-blur-lg border border-white/10 rounded-[32px] px-10 py-8 text-center shadow-2xl">
+            <div className="mb-7">
+              <p className="text-[11px] font-black uppercase tracking-[0.28em] text-blue-300 mb-2">
+                Final Score
+              </p>
+              <p className="text-7xl font-black italic tracking-tighter text-white">
+                {(sim.energy + 80 - sim.time).toFixed(1)}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Energy</p>
+                <p className="text-xl font-black text-orange-300">{sim.energy.toFixed(1)}%</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Time</p>
+                <p className="text-xl font-black text-white">{sim.time.toFixed(1)}s</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
+                <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Avg Speed</p>
+                <p className="text-xl font-black text-cyan-300">{(50 / sim.time).toFixed(2)}m/s</p>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Finish Overlay */}
-      {sim.state === SimulationState.Finished && (
-        <div className="absolute inset-0 z-[100] bg-black/80 backdrop-blur-xl flex items-center justify-center p-8">
-          <div className="max-w-lg w-full bg-gray-900 rounded-[40px] border border-white/10 p-12 text-center shadow-2xl">
-            <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center mb-8 shadow-2xl shadow-blue-500/40">
-              <Activity className="w-10 h-10 text-white" />
-            </div>
-            <h2 className="text-5xl font-black italic serif uppercase tracking-tighter mb-2">Session Complete</h2>
-            <p className="text-gray-400 text-sm font-bold uppercase tracking-widest mb-12">50m Olympic Pool Performance Data</p>
-            
-            <div className="grid grid-cols-2 gap-6 mb-12">
-              <div className="bg-white/5 rounded-3xl p-6 border border-white/5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Total Time</p>
-                <p className="text-3xl font-black italic serif text-white">{sim.time.toFixed(2)}s</p>
-              </div>
-              <div className="bg-white/5 rounded-3xl p-6 border border-white/5">
-                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2">Avg Speed</p>
-                <p className="text-3xl font-black italic serif text-white">{(50 / sim.time).toFixed(2)}m/s</p>
-              </div>
-            </div>
-
-            <button
-              onClick={sim.stop}
-              className="w-full py-5 rounded-3xl bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-[0.2em] shadow-2xl shadow-blue-500/20 transition-all active:scale-95"
-            >
-              Analyze New Parameters
-            </button>
+      {sim.state === SimulationState.Finished && sim.finishReason === "fail" && (
+        <div className="absolute inset-0 z-[90] pointer-events-none flex items-center justify-center">
+          <div className="text-8xl md:text-9xl font-black italic uppercase tracking-tight text-red-500 drop-shadow-2xl">
+            FAIL
           </div>
         </div>
       )}

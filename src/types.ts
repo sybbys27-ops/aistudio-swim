@@ -18,6 +18,7 @@ export enum SimulationState {
 
 export interface SimulationParams {
   rollingAngle: number;
+  rollingTime: number;
   strokeInterval: number;
   glideHold: number;
   bodyPitch: number;

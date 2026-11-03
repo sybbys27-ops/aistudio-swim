@@ -1,7 +1,35 @@
-import { ThreeElement } from "@react-three/fiber";
-import { DoubleSide } from "three";
+import { useMemo } from "react";
+import { CanvasTexture, DoubleSide, LinearFilter } from "three";
 
 export function Pool() {
+  const distanceMarkers = [10, 20, 30, 40];
+
+  const distanceMarkerTextures = useMemo(
+    () =>
+      distanceMarkers.map((meters) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 128;
+
+        const context = canvas.getContext("2d");
+        if (context) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.fillStyle = "#ffffff";
+          context.font = "bold 72px Arial";
+          context.textAlign = "center";
+          context.textBaseline = "middle";
+          context.fillText(`${meters}m`, canvas.width / 2, canvas.height / 2);
+        }
+
+        const texture = new CanvasTexture(canvas);
+        texture.minFilter = LinearFilter;
+        texture.needsUpdate = true;
+
+        return { meters, texture };
+      }),
+    []
+  );
+
   return (
     <group>
       {/* Pool Deck / Surroundings - Using 4 planes to create a hole */}
@@ -69,6 +97,24 @@ export function Pool() {
         <planeGeometry args={[1, 0.2]} />
         <meshBasicMaterial color="#000000" />
       </mesh>
+
+      {/* Distance markers - local canvas textures, no external font loading */}
+      {distanceMarkerTextures.map(({ meters, texture }) => (
+        <mesh
+          key={meters}
+          position={[1.45, -1.965, meters]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[1.6, 0.8]} />
+          <meshBasicMaterial
+            map={texture}
+            transparent
+            opacity={0.9}
+            depthWrite={false}
+            side={DoubleSide}
+          />
+        </mesh>
+      ))}
 
       {/* Water Surface - Extremely transparent to ensure swimmer visibility */}
       <mesh position={[0, 0.05, 25]} rotation={[-Math.PI / 2, 0, 0]}>
