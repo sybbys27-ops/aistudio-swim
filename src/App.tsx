@@ -11,7 +11,7 @@ import { Pool } from "./components/Pool";
 import { SimulationState, CameraView } from "./types";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Vector3 } from "three";
-import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2 } from "lucide-react";
+import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2, VolumeX } from "lucide-react";
 
 type FeedbackTone = "energy" | "speed";
 
@@ -72,6 +72,7 @@ export default function App() {
   const [showAnalytics, setShowAnalytics] = useState(true);
   const [annotationPos, setAnnotationPos] = useState({ x: 0, y: 0 });
   const [volume, setVolume] = useState(50);
+  const [previousVolume, setPreviousVolume] = useState(50);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isRunning = sim.state !== SimulationState.Stopped && sim.state !== SimulationState.Finished;
@@ -98,6 +99,15 @@ export default function App() {
 
   const handleStop = () => {
     sim.stop();
+  };
+
+  const toggleMute = () => {
+    if (volume > 0) {
+      setPreviousVolume(volume);
+      setVolume(0);
+    } else {
+      setVolume(previousVolume > 0 ? previousVolume : 50);
+    }
   };
 
   const activeFeedbacks = useMemo<FeedbackMessage[]>(() => {
@@ -234,7 +244,16 @@ export default function App() {
 
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-3 min-w-[220px]">
-            <Volume2 className="w-4 h-4 text-orange-300" />
+            <button
+              onClick={toggleMute}
+              className="p-1 text-orange-300 hover:text-orange-200 transition-colors"
+              aria-label={volume === 0 ? "Unmute background music" : "Mute background music"}
+              title={volume === 0 ? "Unmute" : "Mute"}
+            >
+              {volume === 0
+                ? <VolumeX className="w-4 h-4" />
+                : <Volume2 className="w-4 h-4" />}
+            </button>
             <input
               type="range"
               min="0"
@@ -429,7 +448,10 @@ export default function App() {
       {isRunning && (
         <div
           className="absolute z-20 pointer-events-none -translate-x-1/2 -translate-y-1/2"
-          style={{ left: annotationPos.x, top: annotationPos.y }}
+          style={{
+            left: annotationPos.x,
+            top: annotationPos.y - (cameraView === "TOP" ? 150 : cameraView === "SIDE" ? 120 : 0),
+          }}
         >
           <div className="px-4 py-2 bg-black/80 backdrop-blur-md border border-blue-500/50 rounded-xl shadow-2xl flex items-center gap-3 whitespace-nowrap">
             <div className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,1)]" />
