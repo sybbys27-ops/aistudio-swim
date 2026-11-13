@@ -410,7 +410,10 @@ export function useSimulation() {
           // This restores the swimmer to a prone freestyle orientation after the flip
           // instead of leaving the body inverted in a backstroke-like posture.
           const p2 = (progress - 0.2) / 0.8;
-          d.turnPitch = -180 * p2;
+          // Use the opposite pitch sign at the far wall so the head always
+          // travels over the water surface during the backward turn.
+          const flipDirection = d.direction === 1 ? -1 : 1;
+          d.turnPitch = flipDirection * 180 * p2;
           d.roll = 75 + 105 * p2;
           d.yOffset = UNDERWATER_START_DEPTH * p2;
         }
@@ -427,8 +430,8 @@ export function useSimulation() {
           d.speed = 1.6;
           d.yOffset = UNDERWATER_START_DEPTH;
 
-          // The completed -180° backward flip + +180° body roll is visually
-          // equivalent to a clean 180° change of heading while remaining prone.
+          // The completed direction-aware 180° backward flip + +180° body roll
+          // is visually equivalent to a clean 180° change of heading while remaining prone.
           // Normalize all temporary turn rotations here so the underwater glide
           // does not suddenly invert into a backstroke posture.
           d.roll = 0;
