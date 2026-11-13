@@ -13,7 +13,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2, VolumeX } from "lucide-react";
 
-type FeedbackTone = "energy" | "speed";
+type FeedbackTone = "energy" | "speed" | "bonus";
 
 interface FeedbackMessage {
   label: string;
@@ -174,8 +174,22 @@ export default function App() {
       });
     }
 
+    if (sim.mode === "ENDLESS" && sim.comfortActive) {
+      items.push({
+        label: "Comfort Rhythm",
+        penalty: "+1.0E / cycle",
+        tone: "bonus",
+      });
+    }
+
     return items;
-  }, [sim.params.rollingAngle, sim.params.bodyPitch, sim.strokeTime]);
+  }, [
+    sim.params.rollingAngle,
+    sim.params.bodyPitch,
+    sim.strokeTime,
+    sim.mode,
+    sim.comfortActive,
+  ]);
 
   const cameraPosition = useMemo(() => {
     switch (cameraView) {
@@ -508,10 +522,20 @@ export default function App() {
                 key={`${message.label}-${index}`}
                 className="text-sm font-black tracking-wide whitespace-nowrap"
               >
-                <span className={message.tone === "energy" ? "text-orange-400" : "text-yellow-300"}>
+                <span
+                  className={
+                    message.tone === "bonus"
+                      ? "text-emerald-300"
+                      : message.tone === "energy"
+                        ? "text-orange-400"
+                        : "text-yellow-300"
+                  }
+                >
                   {message.label}
                 </span>
-                <span className="ml-3 text-red-500">{message.penalty}</span>
+                <span className={`ml-3 ${message.tone === "bonus" ? "text-emerald-400" : "text-red-500"}`}>
+                  {message.penalty}
+                </span>
               </div>
             ))}
           </div>
