@@ -271,7 +271,7 @@ export function useSimulation() {
     d.state = SimulationState.Turning;
     d.turnElapsed = 0;
     d.turnStartRoll = d.roll;
-    d.turnStartPitch = d.turnPitch;
+    d.turnStartPitch = 0;
     d.speed = 0;
     d.thrust = 0;
     d.rightArmPhase = ArmPhase.ExtendedForward;
@@ -402,7 +402,7 @@ export function useSimulation() {
         if (progress < 0.2) {
           const p1 = progress / 0.2;
           d.roll = d.turnStartRoll + (75 - d.turnStartRoll) * p1;
-          d.turnPitch = d.turnStartPitch;
+          d.turnPitch = 0;
           d.yOffset = 0;
         } else {
           // Step 2: keep moving backward through a full 180° flip.
@@ -410,12 +410,11 @@ export function useSimulation() {
           // This restores the swimmer to a prone freestyle orientation after the flip
           // instead of leaving the body inverted in a backstroke-like posture.
           const p2 = (progress - 0.2) / 0.8;
-          d.turnPitch = d.turnStartPitch - 180 * p2;
+          d.turnPitch = -180 * p2;
           d.roll = 75 + 105 * p2;
           d.yOffset = UNDERWATER_START_DEPTH * p2;
         }
 
-        d.heading = 0;
         d.rightArmPhase = ArmPhase.ExtendedForward;
         d.leftArmPhase = ArmPhase.ExtendedForward;
         d.thrust = 0;
@@ -427,11 +426,14 @@ export function useSimulation() {
           d.underwaterDistance = 0;
           d.speed = 1.6;
           d.yOffset = UNDERWATER_START_DEPTH;
-          // +180° roll during the flip is equivalent to neutral roll in the
-          // newly reversed swimming direction, so normalize the displayed roll to 0°.
+
+          // The completed -180° backward flip + +180° body roll is visually
+          // equivalent to a clean 180° change of heading while remaining prone.
+          // Normalize all temporary turn rotations here so the underwater glide
+          // does not suddenly invert into a backstroke posture.
           d.roll = 0;
-          d.turnPitch = d.turnStartPitch - 180;
-          d.heading = 0;
+          d.turnPitch = 0;
+          d.heading = d.direction === -1 ? 180 : 0;
           setState(SimulationState.UnderwaterGlide);
         }
       } else if (d.state === SimulationState.UnderwaterGlide) {
@@ -444,7 +446,6 @@ export function useSimulation() {
         const progress = Math.min(1, d.underwaterDistance / UNDERWATER_DISTANCE);
         d.roll = 0;
         d.yOffset = UNDERWATER_START_DEPTH * (1 - progress);
-        d.heading = 0;
         d.thrust = 0;
         d.drag = 0;
         d.rightArmPhase = ArmPhase.ExtendedForward;
