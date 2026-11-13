@@ -361,7 +361,7 @@ export default function App() {
           {sim.mode === "ENDLESS" && (
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3 text-[9px] font-bold uppercase tracking-wider">
               <div className="flex justify-between text-gray-400">
-                <span>Stroke Cost</span><span className="text-orange-300">3.75E</span>
+                <span>Stroke Cost</span><span className="text-orange-300">3.5E</span>
               </div>
               <div className="mt-2 flex justify-between text-gray-400">
                 <span>Glide Recovery</span><span className="text-green-300">+{sim.glideRecovery.toFixed(2)}E</span>
@@ -399,7 +399,7 @@ export default function App() {
               {isRunning ? "Stop Session" : "Start Simulation"}
             </button>
             <button 
-              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 3, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
+              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 2.5, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
               className="w-full py-3 rounded-2xl bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all"
             >
               Reset to Optimal
