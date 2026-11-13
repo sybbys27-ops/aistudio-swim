@@ -571,7 +571,7 @@ export default function App() {
                 Final Score
               </p>
               <p className="text-7xl font-black italic tracking-tighter text-white">
-                {(sim.energy + 80 - sim.time).toFixed(1)}
+                {((sim.energy + 80 - sim.time) * (50 / Math.max(0.1, sim.time))).toFixed(1)}
               </p>
             </div>
 
