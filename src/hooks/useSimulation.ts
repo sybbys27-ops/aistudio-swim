@@ -406,11 +406,12 @@ export function useSimulation() {
           d.yOffset = 0;
         } else {
           // Step 2: keep moving backward through a full 180° flip.
-          // The flip itself reverses the swimmer's facing direction, so no yaw is used.
-          // During the same motion the swimmer sinks to 1 m and the +75° roll relaxes to 0°.
+          // At the same time, continue the body roll from +75° to +180°.
+          // This restores the swimmer to a prone freestyle orientation after the flip
+          // instead of leaving the body inverted in a backstroke-like posture.
           const p2 = (progress - 0.2) / 0.8;
           d.turnPitch = d.turnStartPitch - 180 * p2;
-          d.roll = 75 * (1 - p2);
+          d.roll = 75 + 105 * p2;
           d.yOffset = UNDERWATER_START_DEPTH * p2;
         }
 
@@ -426,6 +427,8 @@ export function useSimulation() {
           d.underwaterDistance = 0;
           d.speed = 1.6;
           d.yOffset = UNDERWATER_START_DEPTH;
+          // +180° roll during the flip is equivalent to neutral roll in the
+          // newly reversed swimming direction, so normalize the displayed roll to 0°.
           d.roll = 0;
           d.turnPitch = d.turnStartPitch - 180;
           d.heading = 0;
