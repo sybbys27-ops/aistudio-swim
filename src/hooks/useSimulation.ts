@@ -10,7 +10,7 @@ export interface MetricPoint {
 
 const MIN_KICK_SPEED = 0.3;
 const SWIMMER_MASS = 80;
-const ENDLESS_STROKE_COST = 3.75;
+const ENDLESS_STROKE_COST = 3.5;
 const TURN_ENERGY_COST = 4;
 const TURN_DURATION = 2.5;
 const UNDERWATER_DISTANCE = 5;
@@ -19,7 +19,7 @@ const UNDERWATER_START_DEPTH = -1;
 export function useSimulation() {
   const [params, setParams] = useState<SimulationParams>({
     rollingAngle: 50,
-    rollingTime: 3.0,
+    rollingTime: 2.5,
     strokeInterval: 3.5,
     glideHold: 1.0,
     bodyPitch: -1,
