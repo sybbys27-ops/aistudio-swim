@@ -72,6 +72,7 @@ export function useSimulation() {
     direction: 1 as 1 | -1,
     turnElapsed: 0,
     turnStartRoll: 0,
+    turnStartPitch: 0,
     underwaterDistance: 0,
     pendingExhaustion: false,
     leadArm: "Right" as "Right" | "Left",
@@ -270,6 +271,7 @@ export function useSimulation() {
     d.state = SimulationState.Turning;
     d.turnElapsed = 0;
     d.turnStartRoll = d.roll;
+    d.turnStartPitch = d.turnPitch;
     d.speed = 0;
     d.thrust = 0;
     d.rightArmPhase = ArmPhase.ExtendedForward;
@@ -396,31 +398,23 @@ export function useSimulation() {
         d.turnElapsed += dt;
         const progress = Math.min(1, d.turnElapsed / TURN_DURATION);
 
-        // Arrival: settle into a 75° side roll.
+        // Step 1: at the wall, roll to +75° (right shoulder rises).
         if (progress < 0.2) {
           const p1 = progress / 0.2;
           d.roll = d.turnStartRoll + (75 - d.turnStartRoll) * p1;
-          d.turnPitch = 0;
-        } else if (progress < 0.5) {
-          const p2 = (progress - 0.2) / 0.3;
-          d.roll = 75;
-          d.turnPitch = -90 * p2;
-          d.yOffset = -0.35 * p2;
-        } else if (progress < 0.8) {
-          const p3 = (progress - 0.5) / 0.3;
-          d.roll = 75;
-          d.turnPitch = -90 + 90 * p3;
-          d.heading = d.direction === 1 ? 180 * p3 : 180 - 180 * p3;
-          d.yOffset = -0.35 - 0.65 * p3;
+          d.turnPitch = d.turnStartPitch;
+          d.yOffset = 0;
         } else {
-          const p4 = (progress - 0.8) / 0.2;
-          d.roll = 75;
-          d.turnPitch = 0;
-          d.yOffset = -1;
-          d.heading = d.direction === 1 ? 180 : 0;
-          d.speed = 1.6 * p4;
+          // Step 2: keep moving backward through a full 180° flip.
+          // The flip itself reverses the swimmer's facing direction, so no yaw is used.
+          // During the same motion the swimmer sinks to 1 m and the +75° roll relaxes to 0°.
+          const p2 = (progress - 0.2) / 0.8;
+          d.turnPitch = d.turnStartPitch - 180 * p2;
+          d.roll = 75 * (1 - p2);
+          d.yOffset = UNDERWATER_START_DEPTH * p2;
         }
 
+        d.heading = 0;
         d.rightArmPhase = ArmPhase.ExtendedForward;
         d.leftArmPhase = ArmPhase.ExtendedForward;
         d.thrust = 0;
@@ -432,8 +426,9 @@ export function useSimulation() {
           d.underwaterDistance = 0;
           d.speed = 1.6;
           d.yOffset = UNDERWATER_START_DEPTH;
-          d.roll = 75;
-          d.turnPitch = 0;
+          d.roll = 0;
+          d.turnPitch = d.turnStartPitch - 180;
+          d.heading = 0;
           setState(SimulationState.UnderwaterGlide);
         }
       } else if (d.state === SimulationState.UnderwaterGlide) {
@@ -444,9 +439,9 @@ export function useSimulation() {
         d.underwaterDistance += move;
 
         const progress = Math.min(1, d.underwaterDistance / UNDERWATER_DISTANCE);
-        d.roll = 75 * (1 - progress);
+        d.roll = 0;
         d.yOffset = UNDERWATER_START_DEPTH * (1 - progress);
-        d.turnPitch = 0;
+        d.heading = 0;
         d.thrust = 0;
         d.drag = 0;
         d.rightArmPhase = ArmPhase.ExtendedForward;
@@ -508,6 +503,7 @@ export function useSimulation() {
       direction: 1,
       turnElapsed: 0,
       turnStartRoll: 0,
+      turnStartPitch: 0,
       underwaterDistance: 0,
       pendingExhaustion: false,
       leadArm: "Right",
