@@ -12,6 +12,8 @@ export enum SimulationState {
   InitialRolling = "Initial Rolling",
   GlideHold = "Glide Hold",
   Running = "Running",
+  Turning = "Turning",
+  UnderwaterGlide = "Underwater Glide",
   Finished = "Finished",
   Sinking = "Sinking",
 }
@@ -41,3 +43,5 @@ export interface SimulationResults {
 }
 
 export type CameraView = "SIDE" | "TOP" | "FOLLOW" | "FRONT";
+
+export type SimulationMode = "SPRINT50" | "ENDLESS";

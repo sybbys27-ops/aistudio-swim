@@ -13,6 +13,8 @@ interface SwimmerModelProps {
   leftArmTime: number;
   distance: number;
   yOffset: number;
+  heading: number;
+  turnPitch: number;
   state: SimulationState;
 }
 
@@ -26,6 +28,8 @@ export function SwimmerModel({
   leftArmTime,
   distance,
   yOffset,
+  heading,
+  turnPitch,
   state: simState,
 }: SwimmerModelProps) {
   const groupRef = useRef<Group>(null);
@@ -34,7 +38,9 @@ export function SwimmerModel({
   const rightLegRef = useRef<Group>(null);
   const leftLegRef = useRef<Group>(null);
 
-  const isMoving = simState !== SimulationState.Stopped && simState !== SimulationState.Finished;
+  const isMoving =
+    simState === SimulationState.InitialRolling ||
+    simState === SimulationState.Running;
 
   const getArmRotation = (phase: ArmPhase, time: number) => {
     if (phase === ArmPhase.Idle || phase === ArmPhase.ExtendedForward || strokeTime <= 0) return 0;
@@ -65,7 +71,9 @@ export function SwimmerModel({
       // Three.js Z rotation is inverted here so the visual pose follows that convention.
       groupRef.current.rotation.z = (-rollAngle * Math.PI) / 180;
       // Positive Body Pitch raises the upper body; negative lowers it.
-      groupRef.current.rotation.x = (-pitchAngle * Math.PI) / 180;
+      // turnPitch adds the temporary vertical rotation used during an ENDLESS turn.
+      groupRef.current.rotation.x = ((-pitchAngle + turnPitch) * Math.PI) / 180;
+      groupRef.current.rotation.y = (heading * Math.PI) / 180;
       groupRef.current.position.z = distance;
       groupRef.current.position.y = yOffset;
     }

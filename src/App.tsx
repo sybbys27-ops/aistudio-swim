@@ -13,7 +13,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { Vector3 } from "three";
 import { Play, RotateCcw, Camera, Activity, Settings, Info, ChevronRight, ChevronLeft, Volume2, VolumeX } from "lucide-react";
 
-type FeedbackTone = "energy" | "speed";
+type FeedbackTone = "energy" | "speed" | "bonus";
 
 interface FeedbackMessage {
   label: string;
@@ -42,9 +42,11 @@ function getStrokeTimeEfficiency(strokeTime: number) {
 
 function SwimmerAnnotationTracker({
   distance,
+  direction,
   onUpdate,
 }: {
   distance: number;
+  direction: 1 | -1;
   onUpdate: (position: { x: number; y: number }) => void;
 }) {
   const { camera, size } = useThree();
@@ -53,7 +55,7 @@ function SwimmerAnnotationTracker({
   useFrame(() => {
     // Swimmer moves along +Z. Legs trail toward -Z, so place the label
     // 1.15m behind the swimmer's body center.
-    point.set(0, 0.55, distance - 1.15);
+    point.set(0, 0.55, distance - 1.15 * direction);
     point.project(camera);
 
     onUpdate({
@@ -172,17 +174,33 @@ export default function App() {
       });
     }
 
+    if (sim.mode === "ENDLESS" && sim.comfortActive) {
+      items.push({
+        label: "Comfort Rhythm",
+        penalty: "+1.0E / cycle",
+        tone: "bonus",
+      });
+    }
+
     return items;
-  }, [sim.params.rollingAngle, sim.params.bodyPitch, sim.strokeTime]);
+  }, [
+    sim.params.rollingAngle,
+    sim.params.bodyPitch,
+    sim.strokeTime,
+    sim.mode,
+    sim.comfortActive,
+  ]);
 
   const cameraPosition = useMemo(() => {
     switch (cameraView) {
       case "TOP": return [0, 20, 25] as [number, number, number];
-      case "FOLLOW": return [3, 2, sim.distance + 5] as [number, number, number];
-      case "FRONT": return [0, 1, sim.distance + 3] as [number, number, number];
+      case "FOLLOW":
+        return [3, 2, sim.distance + 5 * sim.direction] as [number, number, number];
+      case "FRONT":
+        return [0, 1, sim.distance + 3 * sim.direction] as [number, number, number];
       default: return [15, 5, 25] as [number, number, number];
     }
-  }, [cameraView, sim.distance]);
+  }, [cameraView, sim.distance, sim.direction]);
 
   return (
     <div className="relative w-full h-screen bg-[#0a0a0a] text-white overflow-hidden font-sans selection:bg-blue-500/30">
@@ -218,10 +236,13 @@ export default function App() {
             leftArmTime={sim.leftArmTime}
             distance={sim.distance}
             yOffset={sim.yOffset}
+            heading={sim.heading}
+            turnPitch={sim.turnPitch}
             state={sim.state}
           />
           <SwimmerAnnotationTracker
             distance={sim.distance}
+            direction={sim.direction}
             onUpdate={setAnnotationPos}
           />
           <Pool />
@@ -312,6 +333,51 @@ export default function App() {
             <Settings className="w-4 h-4 text-gray-500" />
           </div>
           
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => sim.setMode("SPRINT50")}
+              disabled={isRunning}
+              className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                sim.mode === "SPRINT50"
+                  ? "bg-blue-600 text-white border-blue-400"
+                  : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+              } disabled:opacity-50`}
+            >
+              50m Mode
+            </button>
+            <button
+              onClick={() => sim.setMode("ENDLESS")}
+              disabled={isRunning}
+              className={`py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                sim.mode === "ENDLESS"
+                  ? "bg-emerald-600 text-white border-emerald-400"
+                  : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
+              } disabled:opacity-50`}
+            >
+              Endless
+            </button>
+          </div>
+
+          {sim.mode === "ENDLESS" && (
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3 text-[9px] font-bold uppercase tracking-wider">
+              <div className="flex justify-between text-gray-400">
+                <span>Stroke Cost</span><span className="text-orange-300">3.5E</span>
+              </div>
+              <div className="mt-2 flex justify-between text-gray-400">
+                <span>Glide Recovery</span><span className="text-green-300">+{sim.glideRecovery.toFixed(2)}E</span>
+              </div>
+              <div className="mt-2 flex justify-between text-gray-400">
+                <span>Comfort Rhythm</span>
+                <span className={sim.comfortActive ? "text-green-300" : "text-gray-600"}>
+                  {sim.comfortActive ? "+1E / cycle" : "OFF"}
+                </span>
+              </div>
+              <div className="mt-2 flex justify-between text-gray-400">
+                <span>Turn Cost</span><span className="text-orange-300">-4E</span>
+              </div>
+            </div>
+          )}
+
           <ControlPanel 
             params={sim.params} 
             setParams={(p) => sim.setParams(prev => ({ ...prev, ...p }))} 
@@ -333,7 +399,7 @@ export default function App() {
               {isRunning ? "Stop Session" : "Start Simulation"}
             </button>
             <button 
-              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 3, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
+              onClick={() => sim.setParams({ rollingAngle: 50, rollingTime: 2.5, strokeInterval: 3.5, glideHold: 1, bodyPitch: -1 })}
               className="w-full py-3 rounded-2xl bg-white/5 text-gray-400 text-[10px] font-black uppercase tracking-widest border border-white/5 hover:bg-white/10 transition-all"
             >
               Reset to Optimal
@@ -369,9 +435,31 @@ export default function App() {
             </div>
             <div className="bg-white/5 rounded-2xl p-4 border border-white/5">
               <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">Distance</p>
-              <p className="text-2xl font-black italic serif tracking-tighter text-white">{sim.distance.toFixed(1)} <span className="text-xs font-normal not-italic text-gray-400 ml-1">/ 50.0m</span></p>
+              <p className="text-2xl font-black italic serif tracking-tighter text-white">
+                {sim.mode === "ENDLESS" ? sim.totalDistance.toFixed(1) : sim.distance.toFixed(1)}
+                <span className="text-xs font-normal not-italic text-gray-400 ml-1">
+                  {sim.mode === "ENDLESS" ? "m total" : "/ 50.0m"}
+                </span>
+              </p>
             </div>
           </div>
+
+          {sim.mode === "ENDLESS" && (
+            <div className="grid grid-cols-3 gap-2">
+              <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                <p className="text-[8px] text-gray-500 font-bold uppercase">Length</p>
+                <p className="text-sm font-black text-white">{sim.lengthCount}</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                <p className="text-[8px] text-gray-500 font-bold uppercase">In Length</p>
+                <p className="text-sm font-black text-white">{sim.lengthDistance.toFixed(1)}m</p>
+              </div>
+              <div className="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
+                <p className="text-[8px] text-gray-500 font-bold uppercase">Turns</p>
+                <p className="text-sm font-black text-white">{sim.turnCount}</p>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-4">
             <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
@@ -434,10 +522,20 @@ export default function App() {
                 key={`${message.label}-${index}`}
                 className="text-sm font-black tracking-wide whitespace-nowrap"
               >
-                <span className={message.tone === "energy" ? "text-orange-400" : "text-yellow-300"}>
+                <span
+                  className={
+                    message.tone === "bonus"
+                      ? "text-emerald-300"
+                      : message.tone === "energy"
+                        ? "text-orange-400"
+                        : "text-yellow-300"
+                  }
+                >
                   {message.label}
                 </span>
-                <span className="ml-3 text-red-500">{message.penalty}</span>
+                <span className={`ml-3 ${message.tone === "bonus" ? "text-emerald-400" : "text-red-500"}`}>
+                  {message.penalty}
+                </span>
               </div>
             ))}
           </div>
@@ -473,7 +571,7 @@ export default function App() {
                 Final Score
               </p>
               <p className="text-7xl font-black italic tracking-tighter text-white">
-                {(sim.energy + 80 - sim.time).toFixed(1)}
+                {((sim.energy + 80 - sim.time) * (50 / Math.max(0.1, sim.time))).toFixed(1)}
               </p>
             </div>
 
@@ -489,6 +587,39 @@ export default function App() {
               <div className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4">
                 <p className="text-[9px] uppercase font-bold tracking-widest text-gray-400 mb-1">Avg Speed</p>
                 <p className="text-xl font-black text-cyan-300">{(50 / sim.time).toFixed(2)}m/s</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {sim.state === SimulationState.Finished && sim.finishReason === "endless" && (
+        <div className="absolute inset-0 z-[90] pointer-events-none flex items-center justify-center">
+          <div className="w-[600px] max-w-[82vw] bg-black/60 backdrop-blur-lg border border-emerald-400/20 rounded-[32px] px-10 py-8 text-center shadow-2xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.28em] text-emerald-300 mb-2">
+              Endless Record
+            </p>
+            <p className="text-7xl font-black italic tracking-tighter text-white mb-7">
+              {sim.totalDistance.toFixed(0)}m
+            </p>
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-3 py-4">
+                <p className="text-[8px] uppercase font-bold tracking-widest text-gray-400 mb-1">Time</p>
+                <p className="text-lg font-black text-white">{sim.time.toFixed(1)}s</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-3 py-4">
+                <p className="text-[8px] uppercase font-bold tracking-widest text-gray-400 mb-1">Avg Speed</p>
+                <p className="text-lg font-black text-cyan-300">
+                  {(sim.totalDistance / Math.max(0.1, sim.time)).toFixed(2)}m/s
+                </p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-3 py-4">
+                <p className="text-[8px] uppercase font-bold tracking-widest text-gray-400 mb-1">Lengths</p>
+                <p className="text-lg font-black text-emerald-300">{Math.floor(sim.totalDistance / 50)}</p>
+              </div>
+              <div className="bg-white/5 border border-white/10 rounded-2xl px-3 py-4">
+                <p className="text-[8px] uppercase font-bold tracking-widest text-gray-400 mb-1">Turns</p>
+                <p className="text-lg font-black text-orange-300">{sim.turnCount}</p>
               </div>
             </div>
           </div>

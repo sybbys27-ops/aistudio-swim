@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/freestyle-timing-model
+      - feature/endless-mode
   workflow_dispatch:
 
 jobs:
