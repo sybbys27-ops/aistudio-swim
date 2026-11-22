@@ -374,7 +374,7 @@ export default function App() {
                 </span>
               </div>
               <div className="mt-2 flex justify-between text-gray-400">
-                <span>Turn Cost</span><span className="text-orange-300">-4E</span>
+                <span>Turn Cost (after first 50m)</span><span className="text-orange-300">-4E</span>
               </div>
             </div>
           )}
