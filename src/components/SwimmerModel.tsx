@@ -16,6 +16,7 @@ interface SwimmerModelProps {
   heading: number;
   turnPitch: number;
   comfortKick: boolean;
+  slowKick: boolean;
   state: SimulationState;
 }
 
@@ -32,6 +33,7 @@ export function SwimmerModel({
   heading,
   turnPitch,
   comfortKick,
+  slowKick,
   state: simState,
 }: SwimmerModelProps) {
   const groupRef = useRef<Group>(null);
@@ -87,8 +89,9 @@ export function SwimmerModel({
       leftArmRef.current.rotation.x = getArmRotation(leftArmPhase, leftArmTime);
     }
 
-    // ENDLESS comfort rhythm halves the leg-kick frequency, not the forward swim speed.
-    const kickFrequency = comfortKick ? 6 : 12;
+    // Kick animation only: baseline 12; Comfort Rhythm 6 (50%);
+    // Stroke Time > 4s in ENDLESS: 4.2 (another 30% below Comfort).
+    const kickFrequency = slowKick ? 4.2 : comfortKick ? 6 : 12;
     // Flutter kick remains continuous while the swimmer is active.
     if (rightLegRef.current) {
       rightLegRef.current.rotation.x = isMoving ? Math.sin(t * kickFrequency) * 0.25 : 0;
