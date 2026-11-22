@@ -239,6 +239,7 @@ export default function App() {
             heading={sim.heading}
             turnPitch={sim.turnPitch}
             comfortKick={sim.comfortActive}
+            slowKick={sim.mode === "ENDLESS" && sim.strokeTime > 4}
             state={sim.state}
           />
           <SwimmerAnnotationTracker
