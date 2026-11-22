@@ -10,7 +10,7 @@ export interface MetricPoint {
 
 const MIN_KICK_SPEED = 0.3;
 const SWIMMER_MASS = 80;
-const ENDLESS_STROKE_COST = 3.5;
+const ENDLESS_STROKE_COST = 3.0;
 const TURN_ENERGY_COST = 4;
 const TURN_DURATION = 2.5;
 const UNDERWATER_DISTANCE = 5;
@@ -92,7 +92,7 @@ export function useSimulation() {
     const strokeTime = getStrokeTime(p);
     let cost = currentMode === "ENDLESS" ? ENDLESS_STROKE_COST : 4;
     if (p.rollingAngle <= 30) cost += 0.5;
-    if (p.rollingAngle >= 80) cost += 0.5;
+    if (p.rollingAngle >= 60) cost += 0.5;
     if (strokeTime <= 1.5) cost += 0.5;
     const absPitch = Math.abs(p.bodyPitch);
     if (absPitch >= 7) cost += 1.0;
