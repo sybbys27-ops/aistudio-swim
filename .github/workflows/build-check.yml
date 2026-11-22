@@ -5,6 +5,7 @@ on:
     branches:
       - feature/freestyle-timing-model
       - feature/endless-mode
+      - feature/endless-balance-v3
   workflow_dispatch:
 
 jobs:
