@@ -41,7 +41,7 @@ AeroSwim Pro는 자유형 수영의 **롤링, 스트로크 타이밍, 글라이�
 ### 4. 에너지 시스템
 - 시작 Energy 100%
 - 스트로크마다 기본 에너지 소모
-- 부적절한 Rolling Angle, Stroke Time, Body Pitch에 추가 패널티
+- 부적절한 Rolling Angle, Stroke Time, Body Pitch에 추가 패널티 (Rolling Angle ≥60° 시 +0.5E 소모)
 - Glide Duration에 따른 에너지 회복
 - 실시간 Energy Bar 표시
 - Energy가 낮아질수록 상단 숫자 색상 변화
@@ -74,9 +74,9 @@ Energy가 완전히 소진되어 50m를 완주하지 못하면 FAIL이 표시됩
 ENDLESS Mode는 **장거리 자유형에서 편안하고 효율적인 리듬을 얼마나 오래 유지할 수 있는지** 확인하는 모드입니다.
 
 ### ENDLESS 에너지 규칙
-- 기본 Stroke Cost: **3.5E**
-- Turn Cost: **-4E / Turn**
-- Comfort Rhythm: 조건 만족 시 **+1E / 좌·우 1 Cycle**
+- 기본 Stroke Cost: **3.0E**
+- Turn Cost: **-4E / Turn** (첫 출발에는 Turn 비용 없음)
+- Comfort Rhythm: 조건 만족 시 **+1E / 좌·우 1 Cycle**, 발차기 애니메이션 빈도 50% 감소
 - Glide Recovery:
   - 1.5초까지는 최대 +1.5E
   - 1.75초는 +1.25E
