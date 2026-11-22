@@ -126,9 +126,9 @@ export default function App() {
       });
     }
 
-    if (rollingAngle >= 80) {
+    if (rollingAngle >= 60) {
       items.push({
-        label: "Rolling Angle ≥ 80°",
+        label: "Rolling Angle ≥ 60°",
         penalty: "-0.5E",
         tone: "energy",
       });
@@ -238,6 +238,7 @@ export default function App() {
             yOffset={sim.yOffset}
             heading={sim.heading}
             turnPitch={sim.turnPitch}
+            comfortKick={sim.comfortActive}
             state={sim.state}
           />
           <SwimmerAnnotationTracker
@@ -361,7 +362,7 @@ export default function App() {
           {sim.mode === "ENDLESS" && (
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-4 py-3 text-[9px] font-bold uppercase tracking-wider">
               <div className="flex justify-between text-gray-400">
-                <span>Stroke Cost</span><span className="text-orange-300">3.5E</span>
+                <span>Stroke Cost</span><span className="text-orange-300">3.0E</span>
               </div>
               <div className="mt-2 flex justify-between text-gray-400">
                 <span>Glide Recovery</span><span className="text-green-300">+{sim.glideRecovery.toFixed(2)}E</span>
