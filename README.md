@@ -77,6 +77,7 @@ ENDLESS Mode는 **장거리 자유형에서 편안하고 효율적인 리듬을 
 - 기본 Stroke Cost: **3.0E**
 - Turn Cost: **-4E / Turn** (첫 출발에는 Turn 비용 없음)
 - Comfort Rhythm: 조건 만족 시 **+1E / 좌·우 1 Cycle**, 발차기 애니메이션 빈도 50% 감소
+- ENDLESS에서 Stroke Time이 **4초 초과**일 때는 Comfort 발차기 빈도보다 30% 더 느리게 표현 (기본 대비 35%). 이 변경은 다리 애니메이션에만 적용되며 실제 추진력/에너지 모델은 변경하지 않음
 - Glide Recovery:
   - 1.5초까지는 최대 +1.5E
   - 1.75초는 +1.25E
